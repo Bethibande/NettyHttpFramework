@@ -2,7 +2,6 @@ package com.bethibande.web
 
 import com.bethibande.web.execution.ThreadPoolExecutor
 import com.bethibande.web.handler.ServerChannelHandler
-import com.bethibande.web.routes.Path
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture

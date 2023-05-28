@@ -193,7 +193,7 @@ class HttpClientContext(
         }
     }
 
-    fun readString(charset: Charset = StandardCharsets.UTF_8, consumer: Consumer<String>) {
+    fun readAsString(charset: Charset = StandardCharsets.UTF_8, consumer: Consumer<String>) {
         readAllAsArray {
             consumer.accept(String(it, charset))
         }

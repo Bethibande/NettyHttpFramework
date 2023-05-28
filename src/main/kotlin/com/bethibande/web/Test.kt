@@ -1,19 +1,15 @@
 package com.bethibande.web
 
 import com.bethibande.web.context.HttpClientContext
-import com.bethibande.web.context.HttpServerContext
 import com.bethibande.web.crypto.KeyHelper
 import com.bethibande.web.execution.ExecutionType
 import com.bethibande.web.execution.ThreadPoolExecutor
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.HttpMethod
-import io.netty.incubator.codec.http3.DefaultHttp3Headers
 import java.io.FileInputStream
 import java.net.InetSocketAddress
-import java.nio.charset.StandardCharsets
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.util.function.Consumer
 
 fun main() {
     val executor = ThreadPoolExecutor(
@@ -53,7 +49,7 @@ fun handler(ctx: HttpClientContext) {
     ctx.onStatus(200) {
         println("length: ${ctx.getContentLength()}")
 
-        ctx.readString {
+        ctx.readAsString {
             println("message: $it")
             ctx.finish()
         }
