@@ -56,8 +56,8 @@ class HttpServerContext(
 
     private val readAllListeners = mutableListOf<Runnable>()
 
-    private fun has(state: Int): Boolean = this.state and state == state
-    private fun set(state: Int) {
+    internal fun has(state: Int): Boolean = this.state and state == state
+    internal fun set(state: Int) {
         this.state = this.state or state
     }
 
@@ -197,6 +197,5 @@ class HttpServerContext(
         .scheme("https")
         .addLong("content-length", contentLength)
 
-    fun getHeader() = this.header
     fun state() = this.state
 }

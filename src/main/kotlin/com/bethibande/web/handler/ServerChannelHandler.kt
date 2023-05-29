@@ -21,6 +21,8 @@ class ServerChannelHandler(
 
         override fun initChannel(p0: QuicStreamChannel) {
             val ctx = HttpServerContext(this.server, p0)
+            this.server.handle(ctx)
+
             p0.pipeline().addLast(ServerRequestHandler(ctx::headerCallback, ctx::dataCallback))
         }
 
