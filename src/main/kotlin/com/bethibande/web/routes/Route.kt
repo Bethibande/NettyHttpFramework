@@ -4,8 +4,8 @@ import io.netty.handler.codec.http.HttpMethod
 
 class Route(
     val path: String,
-    val method: HttpMethod,
-    val pathTokens: Array<String> = path.split(PATH_SEPARATOR).filter { it.isNotEmpty() }.toTypedArray(),
+    val method: HttpMethod? = null,
+    val pathTokens: Array<String> = path.split(PATH_SEPARATOR).toTypedArray(),
     val vars: Map<String, Int> = this.findVariableIndexes(pathTokens),
     val handler: RouteHandler? = null
 ) {

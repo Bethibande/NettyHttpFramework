@@ -178,23 +178,31 @@ class HttpServerContext(
 
     fun write(arr: ByteArray): ChannelFuture = this.write(Unpooled.wrappedBuffer(arr))
 
+    fun flush() {
+        this.lastWrite?.addListener {
+            this.stream.flush()
+        }
+    }
 
     fun finish() {
         if(!has(STATE_HEADER_RECEIVED)) throw IllegalStateException("Cannot close context before receiving a header")
         if(!has(STATE_HEADER_SENT)) throw IllegalStateException("Cannot close context before sending a header")
         if(has(STATE_CLOSED)) throw IllegalStateException("The context is already closed")
-        this.set(STATE_CLOSED)
 
-        this.accessStream { stream ->
-            stream.shutdownInput().addListener {
-                stream.close()
+        this.lastWrite?.addListener {
+            this.stream.let { stream ->
+                this.set(STATE_CLOSED)
+
+                stream.flush()
+                stream.shutdownInput().addListener {
+                    stream.close()
+                }
             }
         }
     }
 
     fun newResponseHeader(status: HttpResponseStatus, contentLength: Long) = DefaultHttp3Headers()
         .status(status.code().toString())
-        .scheme("https")
         .addLong("content-length", contentLength)
 
     fun state() = this.state

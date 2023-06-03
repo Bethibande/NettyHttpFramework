@@ -73,7 +73,7 @@ class Http3Server(
 
             do {
                 val route = iterator.next()
-                if(route.method != method)
+                if(route.method != null && route.method != method) continue
 
                 route.handler?.handle(request)
 
@@ -102,11 +102,6 @@ class Http3Server(
     }
 
     fun getRoutes(): RouteRegistry = this.routeRegistry
-
-    /*fun routes(init: Path.() -> Unit): Http3Server {
-        init.invoke(this.path)
-        return this
-    }*/
 
     fun closeAllInterfaces(): SharedChannelFuture {
         val futures = this.interfaces.map { it.channel.close() }.toTypedArray()

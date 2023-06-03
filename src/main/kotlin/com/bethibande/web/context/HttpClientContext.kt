@@ -138,10 +138,17 @@ class HttpClientContext(
         return future
     }
 
-    fun write(arr: ByteArray): ChannelFuture = this.write(Unpooled.wrappedBuffer(arr))
+    fun write(arr: ByteArray): ChannelFuture = this.write(Unpooled.wrappedBuffer(arr).writerIndex(arr.size))
     fun write(buf: ByteBuffer): ChannelFuture = this.write(Unpooled.wrappedBuffer(buf))
     fun write(str: String, charset: Charset = StandardCharsets.UTF_8): ChannelFuture {
-        return this.write(Unpooled.wrappedBuffer(str.toByteArray(charset)))
+        val arr = str.toByteArray(charset)
+        return this.write(Unpooled.wrappedBuffer(arr).writerIndex(arr.size))
+    }
+
+    fun flush() {
+        this.lastWrite?.addListener {
+            accessStream { it.flush() }
+        }
     }
 
     fun onResponse(consumer: Consumer<Http3Headers>) {
@@ -221,11 +228,12 @@ class HttpClientContext(
         return this.contentLength
     }
 
-    fun newRequestHeader(path: String, method: HttpMethod): Http3Headers = DefaultHttp3Headers()
+    fun newRequestHeader(path: String, method: HttpMethod, contentLength: Long = 0): Http3Headers = DefaultHttp3Headers()
         .scheme("https")
         .authority("${client.address.hostString}:${client.address.port}")
         .path(path)
         .method(method.toString())
+        .setLong("content-length", contentLength)
 
     fun state() = this.state
 
