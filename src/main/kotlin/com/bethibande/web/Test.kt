@@ -1,7 +1,7 @@
 package com.bethibande.web
 
-import com.bethibande.web.context.HttpClientContext
-import com.bethibande.web.context.HttpServerContext
+import com.bethibande.web.context.HttpRequestContext
+import com.bethibande.web.context.HttpResponseContext
 import com.bethibande.web.crypto.KeyHelper
 import com.bethibande.web.execution.ExecutionType
 import com.bethibande.web.execution.ThreadPoolExecutor
@@ -43,7 +43,7 @@ fun main() {
     client.stream(::handler)
 }
 
-fun handler(ctx: HttpClientContext) {
+fun handler(ctx: HttpRequestContext) {
     ctx.sendHeader(ctx.newRequestHeader("/name", HttpMethod.POST, 3))
     ctx.write("Max").addListener { ctx.flush() }
 
@@ -59,17 +59,23 @@ fun handler(ctx: HttpClientContext) {
 
 val data = "Hello World!".toByteArray()
 
-fun helloName(ctx: HttpServerContext) {
+fun helloName(ctx: HttpResponseContext) {
     ctx.readAllAsString {
         val data = "Hello $it!".toByteArray()
         ctx.sendHeader(ctx.newResponseHeader(HttpResponseStatus.OK, data.size.toLong()))
         ctx.write(data)
         ctx.flush()
         ctx.finish()
+
+        ctx.connection().stream { request ->
+            request.sendHeader(request.newRequestHeader("/hello", HttpMethod.GET, 17))
+            request.write("Hello from Server").addListener { request.flush() }
+            request.finish()
+        }
     }
 }
 
-fun helloWorld(ctx: HttpServerContext) {
+fun helloWorld(ctx: HttpResponseContext) {
     val data = "Hello World!".toByteArray()
     ctx.sendHeader(ctx.newResponseHeader(HttpResponseStatus.OK, data.size.toLong()))
     ctx.write(data)

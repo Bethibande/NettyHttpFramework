@@ -1,9 +1,9 @@
 package com.bethibande.web.routes
 
-import com.bethibande.web.context.HttpServerContext
+import com.bethibande.web.context.HttpResponseContext
 
 fun interface RouteHandler {
 
-    fun handle(ctx: HttpServerContext)
+    fun handle(ctx: HttpResponseContext)
 
 }

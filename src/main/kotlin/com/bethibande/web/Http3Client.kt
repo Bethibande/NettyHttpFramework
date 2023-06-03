@@ -1,7 +1,8 @@
 package com.bethibande.web
 
-import com.bethibande.web.context.HttpClientContext
-import com.bethibande.web.handler.ClientChannelHandler
+import com.bethibande.web.context.HttpRequestContext
+import com.bethibande.web.handler.RequestChannelHandler
+import com.bethibande.web.types.IRequestInitiator
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.Channel
 import io.netty.channel.nio.NioEventLoopGroup
@@ -20,7 +21,7 @@ import java.util.function.Consumer
 
 class Http3Client(
     val address: InetSocketAddress
-) {
+): IRequestInitiator {
 
     private val group = NioEventLoopGroup(1)
 
@@ -33,6 +34,7 @@ class Http3Client(
         .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
         .initialMaxData(10000000)
         .initialMaxStreamDataBidirectionalLocal(1000000)
+        .initialMaxStreamsUnidirectional(1000000)
         .build()
 
     private val bs = Bootstrap()
@@ -50,11 +52,13 @@ class Http3Client(
 
     private val streams = mutableListOf<QuicStreamChannel>()
 
-    internal fun newStream(headerCallback: BiConsumer<Http3HeadersFrame, Boolean>,
-                           dataCallback: BiConsumer<Http3DataFrame, Boolean>): Future<QuicStreamChannel> {
+    override fun newStream(
+        headerCallback: BiConsumer<Http3HeadersFrame, Boolean>,
+        dataCallback: BiConsumer<Http3DataFrame, Boolean>
+    ): Future<QuicStreamChannel> {
         val future = Http3.newRequestStream(
             this.quicChannel,
-            ClientChannelHandler(
+            RequestChannelHandler(
                 headerCallback,
                 dataCallback
             )
@@ -72,8 +76,10 @@ class Http3Client(
         return future
     }
 
-    fun stream(handler: Consumer<HttpClientContext>) {
-        val ctx = HttpClientContext(this)
+    override fun address(): InetSocketAddress = this.address
+
+    fun stream(handler: Consumer<HttpRequestContext>) {
+        val ctx = HttpRequestContext(this)
         ctx.connect().addListener { handler.accept(ctx) }
     }
 

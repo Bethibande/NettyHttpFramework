@@ -1,9 +1,11 @@
 package com.bethibande.web
 
-import com.bethibande.web.context.HttpServerContext
+import com.bethibande.web.context.HttpResponseContext
 import com.bethibande.web.execution.ThreadPoolExecutor
 import com.bethibande.web.handler.ServerChannelHandler
 import com.bethibande.web.routes.RouteRegistry
+import com.bethibande.web.types.IRequestResponder
+import com.bethibande.web.types.QuicConnection
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
@@ -13,6 +15,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.incubator.codec.http3.Http3
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler
+import io.netty.incubator.codec.quic.QuicChannel
 import io.netty.incubator.codec.quic.QuicSslContext
 import io.netty.incubator.codec.quic.QuicSslContextBuilder
 import java.net.InetSocketAddress
@@ -24,7 +27,7 @@ class Http3Server(
     private val executor: ThreadPoolExecutor,
     private val privateKey: PrivateKey,
     private val certificate: X509Certificate
-) {
+): IRequestResponder {
 
     companion object {
         const val INITIAL_MAX_DATA: Long = 4096
@@ -40,6 +43,8 @@ class Http3Server(
     private val codec: ChannelHandler
 
     private val routeRegistry = RouteRegistry()
+
+    private val connections = mutableListOf<QuicConnection>()
 
     init {
         this.sslContext = this.initSslContext()
@@ -65,7 +70,18 @@ class Http3Server(
             .build()
     }
 
-    internal fun handle(request: HttpServerContext) {
+    internal fun connect(channel: QuicChannel): QuicConnection {
+        val connection = QuicConnection(channel, this)
+        this.connections.add(connection)
+
+        return connection
+    }
+
+    internal fun disconnect(connection: QuicConnection) {
+        this.connections.remove(connection)
+    }
+
+    internal fun handle(request: HttpResponseContext) {
         request.onRequest {
             val method = HttpMethod.valueOf(it.method().toString())
             val routes = this.routeRegistry.get(it.path().split(Regex("//?")).toTypedArray())
@@ -77,7 +93,7 @@ class Http3Server(
 
                 route.handler?.handle(request)
 
-            } while(iterator.hasNext() && !request.has(HttpServerContext.STATE_CLOSED))
+            } while(iterator.hasNext() && !request.has(HttpResponseContext.STATE_CLOSED))
         }
     }
 

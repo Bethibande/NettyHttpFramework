@@ -6,7 +6,7 @@ import io.netty.incubator.codec.http3.Http3HeadersFrame
 import io.netty.incubator.codec.http3.Http3RequestStreamInboundHandler
 import java.util.function.BiConsumer
 
-class ClientChannelHandler(
+class RequestChannelHandler(
     private val headerCallback: BiConsumer<Http3HeadersFrame, Boolean>,
     private val dataCallback: BiConsumer<Http3DataFrame, Boolean>
 ): Http3RequestStreamInboundHandler() {

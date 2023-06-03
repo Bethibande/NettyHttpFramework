@@ -1,7 +1,8 @@
 package com.bethibande.web.context
 
-import com.bethibande.web.Http3Server
 import com.bethibande.web.types.FieldListener
+import com.bethibande.web.types.IRequestResponder
+import com.bethibande.web.types.QuicConnection
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelFuture
@@ -13,6 +14,7 @@ import io.netty.incubator.codec.http3.Http3DataFrame
 import io.netty.incubator.codec.http3.Http3Headers
 import io.netty.incubator.codec.http3.Http3HeadersFrame
 import io.netty.incubator.codec.quic.QuicStreamChannel
+import io.netty.incubator.codec.quic.QuicStreamType
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
@@ -20,8 +22,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 
-class HttpServerContext(
-    private val server: Http3Server,
+class HttpResponseContext(
+    private val server: IRequestResponder,
+    private val connection: QuicConnection,
     private val stream: QuicStreamChannel
 ) {
 
@@ -34,6 +37,7 @@ class HttpServerContext(
         const val STATE_DATA_SENT = 0x08
         const val STATE_RECEIVED_ALL = 0x10
         const val STATE_CLOSED = 0x20
+        const val STATE_CAN_WRITE = 0x40
 
     }
 
@@ -55,6 +59,10 @@ class HttpServerContext(
     private var lastWrite: ChannelFuture? = null
 
     private val readAllListeners = mutableListOf<Runnable>()
+
+    init {
+        if(this.stream.type() == QuicStreamType.BIDIRECTIONAL) set(STATE_CAN_WRITE)
+    }
 
     internal fun has(state: Int): Boolean = this.state and state == state
     internal fun set(state: Int) {
@@ -145,6 +153,7 @@ class HttpServerContext(
 
     private fun <R> accessStream(consumer: (QuicStreamChannel) -> R): R {
         if(has(STATE_CLOSED)) throw IllegalStateException("The context is already closed")
+        if(!has(STATE_CAN_WRITE)) throw IllegalStateException("Cannot write to read-only stream")
         if(!has(STATE_HEADER_RECEIVED)) throw IllegalStateException("Cannot access stream before receiving request header")
         return consumer.invoke(this.stream)
     }
@@ -206,4 +215,6 @@ class HttpServerContext(
         .addLong("content-length", contentLength)
 
     fun state() = this.state
+
+    fun connection() = this.connection
 }

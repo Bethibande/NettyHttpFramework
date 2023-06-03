@@ -1,6 +1,6 @@
 package com.bethibande.web.context
 
-import com.bethibande.web.Http3Client
+import com.bethibande.web.types.IRequestInitiator
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelFuture
@@ -12,6 +12,7 @@ import io.netty.incubator.codec.http3.Http3DataFrame
 import io.netty.incubator.codec.http3.Http3Headers
 import io.netty.incubator.codec.http3.Http3HeadersFrame
 import io.netty.incubator.codec.quic.QuicStreamChannel
+import io.netty.incubator.codec.quic.QuicStreamType
 import io.netty.util.concurrent.Future
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -19,8 +20,8 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.function.Consumer
 
-class HttpClientContext(
-    private val client: Http3Client
+class HttpRequestContext(
+    private val owner: IRequestInitiator
 ) {
 
     companion object {
@@ -33,6 +34,7 @@ class HttpClientContext(
         const val STATE_DATA_RECEIVED = 0x10
         const val STATE_RECEIVED_ALL = 0x20
         const val STATE_CLOSED = 0x40
+        const val STATE_CAN_READ = 0x80
 
     }
 
@@ -57,8 +59,12 @@ class HttpClientContext(
     private var lastWrite: ChannelFuture? = null
 
     internal fun connect(): Future<QuicStreamChannel> {
-        val stream = this.client.newStream(this::headerCallback, this::dataCallback)
-        stream.addListener { this.set(STATE_STREAM) }
+        val stream = this.owner.newStream(this::headerCallback, this::dataCallback)
+        stream.addListener {
+            this.set(STATE_STREAM)
+
+            if(stream.get().type() == QuicStreamType.BIDIRECTIONAL) set(STATE_CAN_READ)
+        }
 
         this.stream = stream
 
@@ -88,7 +94,8 @@ class HttpClientContext(
     }
 
     private fun dataCallback(data: Http3DataFrame, isLast: Boolean) {
-        if(!this.has(STATE_HEADER_RECEIVED))
+        if(!has(STATE_CAN_READ)) throw IllegalStateException("Received data from write-only stream")
+        if(!this.has(STATE_HEADER_RECEIVED)) throw IllegalStateException("Received data before response header")
         this.set(STATE_DATA_RECEIVED)
 
         val buf = data.content()
@@ -152,6 +159,7 @@ class HttpClientContext(
     }
 
     fun onResponse(consumer: Consumer<Http3Headers>) {
+        if(!has(STATE_CAN_READ)) throw IllegalStateException("Cannot read from this channel")
         this.responseListeners.add { consumer.accept(this.response!!) }
     }
 
@@ -164,6 +172,7 @@ class HttpClientContext(
     }
 
     fun onData(consumer: Consumer<ByteBuf>) {
+        if(!has(STATE_CAN_READ)) throw IllegalStateException("Cannot read from this channel")
         this.dataConsumer = consumer
 
         while(this.bufferedData.isNotEmpty()) {
@@ -174,6 +183,7 @@ class HttpClientContext(
     }
 
     fun onReadFinished(runnable: Runnable) {
+        if(!has(STATE_CAN_READ)) throw IllegalStateException("Cannot read from this channel")
         this.receivedAllListeners.add(runnable)
     }
 
@@ -208,7 +218,7 @@ class HttpClientContext(
 
     fun finish() {
         if(!has(STATE_HEADER_SENT)) throw IllegalStateException("Cannot finish request before sending a header")
-        if(!has(STATE_HEADER_RECEIVED)) throw IllegalStateException("Cannot finish request before receiving a header")
+        if(has(STATE_CAN_READ) && !has(STATE_HEADER_RECEIVED)) throw IllegalStateException("Cannot finish request before receiving a header")
 
         this.lastWrite!!.addListener {
             accessStream { stream ->
@@ -228,12 +238,22 @@ class HttpClientContext(
         return this.contentLength
     }
 
-    fun newRequestHeader(path: String, method: HttpMethod, contentLength: Long = 0): Http3Headers = DefaultHttp3Headers()
-        .scheme("https")
-        .authority("${client.address.hostString}:${client.address.port}")
-        .path(path)
-        .method(method.toString())
-        .setLong("content-length", contentLength)
+    fun newRequestHeader(path: String, method: HttpMethod, contentLength: Long = 0): Http3Headers {
+        val headers = DefaultHttp3Headers()
+            .scheme("https")
+            .path(path)
+            .method(method.toString())
+
+        if(contentLength != 0L) {
+            headers.setLong("content-length", contentLength)
+        }
+
+        if(has(STATE_CAN_READ)) {
+            headers.authority("${owner.address().hostString}:${owner.address().port}")
+        }
+
+        return headers;
+    }
 
     fun state() = this.state
 
