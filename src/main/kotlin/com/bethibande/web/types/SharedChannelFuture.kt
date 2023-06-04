@@ -1,4 +1,4 @@
-package com.bethibande.web
+package com.bethibande.web.types
 
 import io.netty.channel.ChannelFuture
 import java.util.concurrent.CompletableFuture
