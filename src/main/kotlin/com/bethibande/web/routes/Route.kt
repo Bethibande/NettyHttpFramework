@@ -1,13 +1,15 @@
 package com.bethibande.web.routes
 
+import com.bethibande.web.request.HttpResponseContext
 import io.netty.handler.codec.http.HttpMethod
+import java.util.function.Consumer
 
 class Route(
     val path: String,
     val method: HttpMethod? = null,
+    val handler: Consumer<HttpResponseContext>? = null,
     val pathTokens: Array<String> = path.split(PATH_SEPARATOR).toTypedArray(),
-    val vars: Map<String, Int> = this.findVariableIndexes(pathTokens),
-    val handler: RouteHandler? = null
+    val vars: Map<String, Int> = this.findVariableIndexes(pathTokens)
 ) {
 
     companion object {

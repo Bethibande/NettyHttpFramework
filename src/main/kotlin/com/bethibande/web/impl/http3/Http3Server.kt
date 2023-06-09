@@ -4,11 +4,13 @@ import com.bethibande.web.HttpServer
 import com.bethibande.web.PendingHttpConnection
 import com.bethibande.web.config.HttpServerConfig
 import com.bethibande.web.execution.ThreadPoolExecutor
-import com.bethibande.web.impl.http3.handler.ServerChannelHandler
+import com.bethibande.web.impl.http3.handler.ServerConnectionHandler
 import com.bethibande.web.request.HttpResponseContext
+import com.bethibande.web.routes.Route
 import com.bethibande.web.routes.RouteRegistry
 import com.bethibande.web.types.Registration
 import io.netty.bootstrap.Bootstrap
+import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandler
 import io.netty.channel.nio.NioEventLoopGroup
@@ -36,6 +38,7 @@ class Http3Server(
     private val group = NioEventLoopGroup(this.executor.threadMinCount(), this.executor)
     private var codec: ChannelHandler
 
+    private val interfaces = mutableListOf<Channel>()
     private val routes = RouteRegistry()
     private val connections = mutableListOf<PendingHttpConnection>()
 
@@ -52,8 +55,17 @@ class Http3Server(
             .initialMaxStreamDataBidirectionalRemote(INITIAL_MAX_DATA_BID_REMOTE)
             .initialMaxStreamsBidirectional(INITIAL_MAX_STREAMS_BID)
             .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
-            .handler(ServerChannelHandler(this))
+            .handler(ServerConnectionHandler(this))
             .build()
+    }
+
+    internal fun addConnection(connection: PendingHttpConnection) {
+        this.connections.add(connection)
+        connection.channel().closeFuture().addListener { this.removeConnection(connection) }
+    }
+
+    internal fun removeConnection(connection: PendingHttpConnection) {
+        this.connections.add(connection)
     }
 
     override fun bindInterface(address: InetSocketAddress): Registration<ChannelFuture> {
@@ -65,19 +77,24 @@ class Http3Server(
             .sync()
             .channel()
 
+        this.interfaces.add(channel)
+
         return object: Registration<ChannelFuture> {
             override fun remove(): ChannelFuture {
+                interfaces.remove(channel)
                 return channel.close()
             }
         }
     }
 
     override fun stop() {
+        this.interfaces.forEach { it.close() }
+        this.interfaces.forEach { it.closeFuture().sync() }
         group.shutdownGracefully().sync()
     }
 
     override fun addRoute(path: String, method: HttpMethod?, handler: Consumer<HttpResponseContext>) {
-        TODO("Not yet implemented")
+        routes.register(Route(path, method, handler))
     }
 
     override fun configure(consumer: Consumer<HttpServerConfig>) {
