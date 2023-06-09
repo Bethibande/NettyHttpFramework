@@ -1,13 +1,12 @@
 package com.bethibande.web
 
+import com.bethibande.web.config.HttpClientConfig
 import com.bethibande.web.request.HttpRequestContext
 import java.net.InetSocketAddress
 import java.util.function.Consumer
 
-interface HttpClient {
+interface HttpClient<C: HttpClientConfig>: HttpConnection {
 
-    fun getTargetAddress(): InetSocketAddress
-
-    fun newRequest(request: Consumer<HttpRequestContext>)
+    fun configure(consumer: Consumer<C>)
 
 }

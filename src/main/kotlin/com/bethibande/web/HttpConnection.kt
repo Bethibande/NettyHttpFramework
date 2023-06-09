@@ -1,14 +1,14 @@
 package com.bethibande.web
 
+import com.bethibande.web.request.HttpRequestContext
+import java.net.InetSocketAddress
+import java.util.function.Consumer
+
 interface HttpConnection {
 
-    fun server(): HttpServer
-    fun client(): HttpClient
+    fun getAddress(): InetSocketAddress
 
-    fun canPush(): Boolean
     fun canRequest(): Boolean
-
-    fun isClosed(): Boolean
-    fun isOpen(): Boolean
+    fun newRequest(request: Consumer<HttpRequestContext>)
 
 }

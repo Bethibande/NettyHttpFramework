@@ -77,13 +77,13 @@ class HttpServiceBuilder(
     fun buildServer(): HttpServer {
         if(this.type == HttpServiceType.CLIENT) throw IllegalStateException("This builder is building a client not a server")
 
-        // TODO: implement server
+        TODO("not yet implemented")
     }
 
     fun buildClient(): HttpClient {
         if(this.type == HttpServiceType.SERVER) throw IllegalStateException("This builder is building a server not a client")
 
-        // TODO: implement client
+        TODO("not yet implemented")
     }
 
 }

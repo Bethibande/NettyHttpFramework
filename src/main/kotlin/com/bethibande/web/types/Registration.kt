@@ -1,7 +1,7 @@
 package com.bethibande.web.types
 
-interface Registration {
+interface Registration<T> {
 
-    fun remove()
+    fun remove(): T
 
 }
