@@ -1,0 +1,199 @@
+package com.bethibande.web.request
+
+import com.bethibande.web.HttpConnection
+import com.bethibande.web.types.FieldListener
+import com.bethibande.web.types.HasState
+import com.bethibande.web.types.ValueQueue
+import io.netty.buffer.ByteBuf
+import io.netty.buffer.Unpooled
+import io.netty.channel.Channel
+import io.netty.channel.ChannelFuture
+import io.netty.channel.ChannelProgressivePromise
+import io.netty.handler.codec.Headers
+import java.io.InputStream
+import java.nio.ByteBuffer
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
+import java.util.function.Consumer
+import java.util.function.Function
+
+abstract class HttpContextBase<H: AbstractHttpHeader, C: HttpConnection>(
+    protected open val connection: C,
+    protected open val channel: Channel
+): HasState() {
+
+    companion object {
+        const val STATE_HEADER_RECEIVED = 0x01
+        const val STATE_HEADER_SENT = 0x02
+    }
+
+    private val headerListener = FieldListener<H>()
+    protected var header: H by headerListener
+
+    protected val dataQueue = ValueQueue<ByteBuf>()
+
+    @Volatile
+    protected var lastWrite: ChannelFuture? = null
+
+    fun connection(): C = this.connection
+    fun closeFuture(): ChannelFuture = this.channel.closeFuture()
+
+    internal fun headerCallback(headers: Headers<*, *, *>) {
+        if(has(STATE_HEADER_RECEIVED)) throw IllegalStateException("Already received a header")
+
+        set(STATE_HEADER_RECEIVED)
+        this.header = this.convertNettyHeaders(headers)
+    }
+
+    internal fun dataCallback(data: ByteBuf) {
+        if(!has(STATE_HEADER_RECEIVED)) throw IllegalStateException("Received data before receiving a header")
+
+        this.dataQueue.offer(data)
+    }
+
+    protected abstract fun convertNettyHeaders(headers: Headers<*, *, *>): H
+
+    fun onHeader(consumer: Consumer<H>) {
+        this.headerListener.addListener(consumer)
+    }
+
+    fun onData(consumer: Consumer<ByteBuf>) {
+        if(this.dataQueue.hasConsumer()) throw IllegalStateException("A data callback has already been set")
+        this.dataQueue.consume(consumer)
+    }
+
+    /**
+     * Use inside of [onHeader] consumer, will throw an exception if called before header is received.
+     * Note, this will set a data consumer using [onData], it is not possible to set a second data consumer.
+     */
+    fun readAllBytes(consumer: Consumer<ByteBuf>): ChannelProgressivePromise {
+        if(this.header.getContentLength() > Int.MAX_VALUE) throw IllegalStateException("The content-length must no exceed ${Int.MAX_VALUE}")
+
+        val length = this.header.getContentLength().toInt()
+        var read = 0
+
+        if(length <= 0) throw IllegalStateException("The content-length must be greater than 0")
+        val buffer = Unpooled.buffer(length, length)
+        val promise = this.channel.newProgressivePromise()
+
+        onData { data ->
+            read += data.writerIndex()
+            buffer.writeBytes(data)
+
+            promise.setProgress(read.toLong(), length.toLong())
+            if(read == length) {
+                promise.setSuccess()
+                consumer.accept(buffer)
+            }
+        }
+
+        return promise
+    }
+
+    fun readAllString(consumer: Consumer<String>, charset: Charset = StandardCharsets.UTF_8): ChannelProgressivePromise {
+        return readAllBytes { bytes ->
+            if(bytes.isDirect) {
+                val copy = ByteArray(bytes.writerIndex())
+                bytes.readBytes(copy)
+
+                consumer.accept(String(copy, charset))
+                return@readAllBytes
+            }
+
+            consumer.accept(String(bytes.array(), charset))
+        }
+    }
+
+    fun writeHeader(header: H): ChannelFuture {
+        if(has(STATE_HEADER_SENT)) throw IllegalStateException("A header has already been sent")
+
+        set(STATE_HEADER_SENT)
+        return this.writeAndFlush(header.toFrame())
+    }
+
+    protected fun <R> access(fn: Function<Channel, R>): R {
+        if(has(STATE_CLOSED)) throw IllegalStateException("The context has already been closed")
+        return fn.apply(this.channel)
+    }
+
+    protected fun writeAndFlush(obj: Any): ChannelFuture = this.access { channel ->
+        val future = channel.writeAndFlush(obj)
+        this.lastWrite = future
+
+        return@access future
+    }
+
+    protected fun write(obj: Any): ChannelFuture = this.access { channel ->
+        val future = channel.write(obj)
+        this.lastWrite = future
+
+        return@access future
+    }
+
+    protected abstract fun frameData(buf: ByteBuf): Any
+
+    fun write(buf: ByteBuf): ChannelFuture = this.write(this.frameData(buf))
+
+    fun write(bytes: ByteArray): ChannelFuture {
+        val buf = Unpooled.wrappedBuffer(bytes)
+        buf.writerIndex(bytes.size)
+        return this.write(buf)
+    }
+
+    fun write(buffer: ByteBuffer): ChannelFuture = this.write(Unpooled.wrappedBuffer(buffer))
+
+    fun write(str: String, charset: Charset = StandardCharsets.UTF_8): ChannelFuture {
+        return this.write(str.toByteArray(charset))
+    }
+
+    /**
+     * @param totalBytes the total amount of bytes that can be read from the stream, may **not** be <= 0
+     */
+    fun write(stream: InputStream, totalBytes: Long, bufferSize: Int = 8192): ChannelProgressivePromise {
+        val promise = this.channel.newProgressivePromise()
+
+        try {
+            var progress = 0L
+            var read: Int
+            do {
+                val buffer = Unpooled.buffer(bufferSize)
+                read = buffer.writeBytes(stream, bufferSize)
+                progress += read
+
+                this.write(buffer).addListener {
+                    promise.setProgress(progress, totalBytes)
+                    if(progress == totalBytes) promise.setSuccess()
+                }
+            } while(read > 0)
+        } catch (th: Throwable) {
+            promise.setFailure(th)
+        }
+
+        return promise
+    }
+
+    fun flush() = this.access { channel ->
+        channel.flush()
+    }
+
+    abstract fun closeContext()
+
+    fun close() {
+        if(has(STATE_CLOSED)) throw IllegalStateException("The context has already been closed")
+        if(has(STATE_HEADER_SENT)) throw IllegalStateException("Cannot close context before sending a header")
+
+        this.lastWrite!!.addListener {
+            this.closeContext()
+            set(STATE_CLOSED)
+        }
+    }
+
+    protected abstract fun newHeaderInstance(): H
+
+    fun newHeader(): H {
+        val header = newHeaderInstance()
+        // TODO: apply default headers
+        return header
+    }
+
+}

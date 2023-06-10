@@ -3,6 +3,7 @@ package com.bethibande.web.impl.http3
 import com.bethibande.web.request.AbstractHttpHeader
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.incubator.codec.http3.DefaultHttp3HeadersFrame
 import io.netty.incubator.codec.http3.Http3Headers
 
 class Http3Header(
@@ -59,6 +60,6 @@ class Http3Header(
 
     override fun getContentLength(): Long = this.getLong("content-length", 0L)
 
-    internal fun unwrap(): Http3Headers = this.headers
+    override fun toFrame(): Any = DefaultHttp3HeadersFrame(this.headers)
 
 }

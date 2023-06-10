@@ -23,7 +23,6 @@ class FieldListener<T> {
     fun addListener(consumer: Consumer<T>) {
         if(this.value != null) {
             consumer.accept(this.value!!)
-            return
         }
         
         this.listeners.add(consumer)
