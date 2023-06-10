@@ -2,8 +2,10 @@ package com.bethibande.web.impl.http3.handler
 
 import com.bethibande.web.impl.http3.Http3Connection
 import com.bethibande.web.impl.http3.Http3Server
+import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
 import io.netty.incubator.codec.quic.QuicChannel
+import io.netty.incubator.codec.quic.QuicConnectionEvent
 import io.netty.incubator.codec.quic.QuicStreamType
 
 class ServerConnectionHandler(
@@ -16,5 +18,4 @@ class ServerConnectionHandler(
 
         p0.pipeline().addLast(ServerStreamHandler(connection))
     }
-
 }

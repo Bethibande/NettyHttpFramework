@@ -15,7 +15,11 @@ abstract class HasState {
     protected fun has(state: Int): Boolean = this.state and state == state
 
     protected fun set(state: Int) {
-        this.state = this.state or state
+        this.state = this.state xor state
+    }
+
+    protected fun resetState() {
+        set(state)
     }
 
 }

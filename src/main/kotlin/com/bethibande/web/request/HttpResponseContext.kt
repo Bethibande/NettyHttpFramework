@@ -6,8 +6,8 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 
 abstract class HttpResponseContext(
-    protected val connection: HttpConnection,
-    protected val channel: Channel
+    protected open val connection: HttpConnection,
+    protected open val channel: Channel
 ): HasState() {
 
     fun connection(): HttpConnection = this.connection
