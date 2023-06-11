@@ -10,6 +10,7 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelProgressivePromise
 import io.netty.handler.codec.Headers
+import io.netty.util.concurrent.Future
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -17,8 +18,8 @@ import java.nio.charset.StandardCharsets
 import java.util.function.Consumer
 import java.util.function.Function
 
-abstract class HttpContextBase<H: AbstractHttpHeader, C: HttpConnection>(
-    protected open val connection: C,
+abstract class HttpContextBase(
+    protected open val connection: HttpConnection,
     protected open val channel: Channel
 ): HasState() {
 
@@ -27,15 +28,15 @@ abstract class HttpContextBase<H: AbstractHttpHeader, C: HttpConnection>(
         const val STATE_HEADER_SENT = 0x02
     }
 
-    private val headerListener = FieldListener<H>()
-    protected var header: H by headerListener
+    private val headerListener = FieldListener<AbstractHttpHeader>()
+    protected var header: AbstractHttpHeader by headerListener
 
     protected val dataQueue = ValueQueue<ByteBuf>()
 
     @Volatile
     protected var lastWrite: ChannelFuture? = null
 
-    fun connection(): C = this.connection
+    fun connection(): HttpConnection = this.connection
     fun closeFuture(): ChannelFuture = this.channel.closeFuture()
 
     internal fun headerCallback(headers: Headers<*, *, *>) {
@@ -51,9 +52,9 @@ abstract class HttpContextBase<H: AbstractHttpHeader, C: HttpConnection>(
         this.dataQueue.offer(data)
     }
 
-    protected abstract fun convertNettyHeaders(headers: Headers<*, *, *>): H
+    protected abstract fun convertNettyHeaders(headers: Headers<*, *, *>): AbstractHttpHeader
 
-    fun onHeader(consumer: Consumer<H>) {
+    fun onHeader(consumer: Consumer<AbstractHttpHeader>) {
         this.headerListener.addListener(consumer)
     }
 
@@ -104,7 +105,7 @@ abstract class HttpContextBase<H: AbstractHttpHeader, C: HttpConnection>(
         }
     }
 
-    fun writeHeader(header: H): ChannelFuture {
+    fun writeHeader(header: AbstractHttpHeader): ChannelFuture {
         if(has(STATE_HEADER_SENT)) throw IllegalStateException("A header has already been sent")
 
         set(STATE_HEADER_SENT)
@@ -188,9 +189,9 @@ abstract class HttpContextBase<H: AbstractHttpHeader, C: HttpConnection>(
         }
     }
 
-    protected abstract fun newHeaderInstance(): H
+    protected abstract fun newHeaderInstance(): AbstractHttpHeader
 
-    fun newHeader(): H {
+    fun newHeader(): AbstractHttpHeader {
         val header = newHeaderInstance()
         // TODO: apply default headers
         return header

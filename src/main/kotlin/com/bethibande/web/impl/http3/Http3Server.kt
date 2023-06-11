@@ -1,11 +1,10 @@
 package com.bethibande.web.impl.http3
 
 import com.bethibande.web.HttpServer
-import com.bethibande.web.PendingHttpConnection
 import com.bethibande.web.config.HttpServerConfig
 import com.bethibande.web.execution.ThreadPoolExecutor
+import com.bethibande.web.impl.http3.context.Http3ResponseContext
 import com.bethibande.web.impl.http3.handler.ServerConnectionHandler
-import com.bethibande.web.request.HttpResponseContext
 import com.bethibande.web.routes.Route
 import com.bethibande.web.routes.RouteRegistry
 import com.bethibande.web.types.Registration
@@ -26,7 +25,7 @@ import java.util.function.Consumer
 class Http3Server(
     private val executor: ThreadPoolExecutor,
     private val sslContext: QuicSslContext
-): HttpServer<HttpServerConfig> {
+): HttpServer<HttpServerConfig, Http3ResponseContext> {
 
     companion object {
         const val INITIAL_MAX_DATA: Long = 4096
@@ -40,7 +39,7 @@ class Http3Server(
 
     private val interfaces = mutableListOf<Channel>()
     private val routes = RouteRegistry()
-    private val connections = mutableListOf<PendingHttpConnection>()
+    private val connections = mutableListOf<Http3Connection>()
 
     init {
         this.codec = this.initCodec()
@@ -59,12 +58,12 @@ class Http3Server(
             .build()
     }
 
-    internal fun addConnection(connection: PendingHttpConnection) {
+    internal fun addConnection(connection: Http3Connection) {
         this.connections.add(connection)
         connection.channel().closeFuture().addListener { this.removeConnection(connection) }
     }
 
-    internal fun removeConnection(connection: PendingHttpConnection) {
+    private fun removeConnection(connection: Http3Connection) {
         this.connections.add(connection)
     }
 
@@ -93,7 +92,7 @@ class Http3Server(
         group.shutdownGracefully().sync()
     }
 
-    override fun addRoute(path: String, method: HttpMethod?, handler: Consumer<HttpResponseContext>) {
+    override fun addRoute(path: String, method: HttpMethod?, handler: Consumer<Http3ResponseContext>) {
         routes.register(Route(path, method, handler))
     }
 

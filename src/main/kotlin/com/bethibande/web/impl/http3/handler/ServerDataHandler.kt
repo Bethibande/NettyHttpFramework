@@ -13,10 +13,10 @@ class ServerDataHandler(
 ): Http3RequestStreamInboundHandler() {
 
     override fun channelRead(p0: ChannelHandlerContext, p1: Http3HeadersFrame, p2: Boolean) {
-        context.headerCallback(p1)
+        context.headerCallback(p1.headers())
     }
 
     override fun channelRead(p0: ChannelHandlerContext, p1: Http3DataFrame, p2: Boolean) {
-        context.dataCallback(p1)
+        context.dataCallback(p1.content())
     }
 }

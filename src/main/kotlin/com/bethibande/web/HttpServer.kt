@@ -8,7 +8,7 @@ import io.netty.handler.codec.http.HttpMethod
 import java.net.InetSocketAddress
 import java.util.function.Consumer
 
-interface HttpServer<C: HttpServerConfig> {
+interface HttpServer<C: HttpServerConfig, R: HttpResponseContext> {
 
     /**
      * Binds a new network interface
@@ -24,7 +24,7 @@ interface HttpServer<C: HttpServerConfig> {
     /**
      * Register a new route
      */
-    fun addRoute(path: String, method: HttpMethod? = null, handler: Consumer<HttpResponseContext>)
+    fun addRoute(path: String, method: HttpMethod? = null, handler: Consumer<R>)
 
     fun configure(consumer: Consumer<C>)
 

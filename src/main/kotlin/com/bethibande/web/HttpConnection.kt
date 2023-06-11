@@ -1,14 +1,15 @@
 package com.bethibande.web
 
-import com.bethibande.web.request.HttpRequestContext
+import io.netty.channel.ChannelFuture
 import java.net.InetSocketAddress
-import java.util.function.Consumer
 
 interface HttpConnection {
 
     fun getAddress(): InetSocketAddress
 
-    fun canRequest(): Boolean
-    fun newRequest(request: Consumer<HttpRequestContext>)
+    fun isOpen(): Boolean
+    fun isClosed(): Boolean
+
+    fun close(): ChannelFuture
 
 }

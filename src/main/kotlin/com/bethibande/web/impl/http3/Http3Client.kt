@@ -1,8 +1,11 @@
 package com.bethibande.web.impl.http3
 
 import com.bethibande.web.HttpClient
+import com.bethibande.web.HttpConnection
 import com.bethibande.web.config.HttpClientConfig
 import com.bethibande.web.execution.ThreadPoolExecutor
+import com.bethibande.web.impl.http3.context.Http3RequestContext
+import com.bethibande.web.impl.http3.handler.ClientDataHandler
 import com.bethibande.web.request.HttpRequestContext
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.Channel
@@ -21,7 +24,7 @@ class Http3Client(
     private val address: InetSocketAddress,
     private val sslContext: QuicSslContext,
     private val executor: ThreadPoolExecutor
-): HttpClient<HttpClientConfig> {
+): HttpClient<HttpClientConfig, Http3Connection, Http3RequestContext> {
 
     private val config = HttpClientConfig()
 
@@ -50,18 +53,28 @@ class Http3Client(
         .connect()
         .get()
 
+    private val connection = Http3Connection(QuicStreamType.BIDIRECTIONAL, this.quicChannel)
+
     override fun configure(consumer: Consumer<HttpClientConfig>) {
         consumer.accept(this.config)
     }
 
-    override fun getAddress(): InetSocketAddress = this.address
+    fun getAddress(): InetSocketAddress = this.address
 
     override fun canRequest(): Boolean = this.quicChannel.peerAllowedStreams(QuicStreamType.BIDIRECTIONAL) > 0
 
-    override fun newRequest(request: Consumer<HttpRequestContext>) {
-        Http3.newRequestStream(
+    override fun newRequest(request: Consumer<Http3RequestContext>) {
+        val futureStream = Http3.newRequestStream(
             this.quicChannel,
             ClientDataHandler(this)
         )
+
+        futureStream.addListener {
+            request.accept(context)
+        }
     }
+
+    fun connection(): Http3Connection = this.connection
+
+    override fun getConnections(): Collection<Http3Connection> = listOf(this.connection)
 }

@@ -1,8 +1,10 @@
 package com.bethibande.web.impl.http3
 
-import com.bethibande.web.PendingHttpConnection
+import com.bethibande.web.HttpConnection
+import com.bethibande.web.impl.http3.context.Http3RequestContext
 import com.bethibande.web.impl.http3.context.Http3ResponseContext
 import com.bethibande.web.request.HttpRequestContext
+import com.bethibande.web.types.CanRequest
 import com.bethibande.web.types.HasState
 import io.netty.channel.ChannelFuture
 import io.netty.incubator.codec.quic.QuicChannel
@@ -16,11 +18,13 @@ import java.util.function.Consumer
 class Http3Connection(
     private val requestStreamType: QuicStreamType,
     private val channel: QuicChannel
-): PendingHttpConnection, AttributeMap, HasState() {
+): HttpConnection, AttributeMap, HasState(), CanRequest<Http3RequestContext> {
 
     private var address: InetSocketAddress? = null
 
     private val streams = mutableListOf<Http3ResponseContext>()
+
+    internal fun channel(): QuicChannel = this.channel
 
     internal fun updateAddress(address: InetSocketAddress) {
         this.address = address
@@ -31,18 +35,13 @@ class Http3Connection(
         context.closeFuture().addListener { this.streams.remove(context) }
     }
 
-    // TODO: spilling internals, channel should not be exposed to users
-    override fun channel(): QuicChannel {
-        return channel
-    }
-
     override fun getAddress(): InetSocketAddress {
         return this.address ?: throw IllegalStateException("Address not yet set")
     }
 
     override fun canRequest(): Boolean = this.channel.peerAllowedStreams(this.requestStreamType) > 0
 
-    override fun newRequest(request: Consumer<HttpRequestContext>) {
+    override fun newRequest(request: Consumer<Http3RequestContext>) {
         TODO("Not yet implemented")
     }
 
