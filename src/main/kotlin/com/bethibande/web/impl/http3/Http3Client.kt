@@ -64,14 +64,10 @@ class Http3Client(
     override fun canRequest(): Boolean = this.quicChannel.peerAllowedStreams(QuicStreamType.BIDIRECTIONAL) > 0
 
     override fun newRequest(request: Consumer<Http3RequestContext>) {
-        val futureStream = Http3.newRequestStream(
+        Http3.newRequestStream(
             this.quicChannel,
-            ClientDataHandler(this)
+            ClientDataHandler(this, request)
         )
-
-        futureStream.addListener {
-            request.accept(context)
-        }
     }
 
     fun connection(): Http3Connection = this.connection
