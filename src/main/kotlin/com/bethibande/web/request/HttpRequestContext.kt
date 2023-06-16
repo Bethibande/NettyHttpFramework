@@ -14,6 +14,7 @@ abstract class HttpRequestContext(
         val header = super.newHeader()
         header.setMethod(method)
         header.setPath(path)
+        header.setAuthority(connection.getAddress().hostString)
 
         return header
     }

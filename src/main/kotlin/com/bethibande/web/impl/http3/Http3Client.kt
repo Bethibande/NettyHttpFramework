@@ -1,16 +1,20 @@
 package com.bethibande.web.impl.http3
 
 import com.bethibande.web.HttpClient
-import com.bethibande.web.HttpConnection
 import com.bethibande.web.config.HttpClientConfig
 import com.bethibande.web.execution.ThreadPoolExecutor
 import com.bethibande.web.impl.http3.context.Http3RequestContext
 import com.bethibande.web.impl.http3.handler.ClientDataHandler
-import com.bethibande.web.request.HttpRequestContext
+import com.bethibande.web.impl.http3.handler.ClientPushHandler
+import com.bethibande.web.request.HttpResponseContext
+import com.bethibande.web.routes.Route
+import com.bethibande.web.routes.RouteRegistry
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.Channel
+import io.netty.channel.ChannelHandler
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioDatagramChannel
+import io.netty.handler.codec.http.HttpMethod
 import io.netty.incubator.codec.http3.Http3
 import io.netty.incubator.codec.http3.Http3ClientConnectionHandler
 import io.netty.incubator.codec.quic.QuicChannel
@@ -20,6 +24,7 @@ import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
+// TODO: register client streams
 class Http3Client(
     private val address: InetSocketAddress,
     private val sslContext: QuicSslContext,
@@ -48,12 +53,28 @@ class Http3Client(
         .channel()
 
     private val quicChannel: QuicChannel = QuicChannel.newBootstrap(channel)
-        .handler(Http3ClientConnectionHandler())
+        .handler(Http3ClientConnectionHandler(
+            null,
+            this::initPushHandler,
+            null,
+            null,
+            true
+        ))
         .remoteAddress(this.address)
         .connect()
         .get()
 
     private val connection = Http3Connection(QuicStreamType.BIDIRECTIONAL, this.quicChannel)
+
+    private val routeRegistry = RouteRegistry()
+
+    internal fun handlePush(pushContext: HttpResponseContext) {
+        pushContext.onHeader {
+            // TODO: handle, RequestHandler interface?
+        }
+    }
+
+    private fun initPushHandler(pushId: Long): ChannelHandler = ClientPushHandler(this)
 
     override fun configure(consumer: Consumer<HttpClientConfig>) {
         consumer.accept(this.config)
@@ -68,6 +89,10 @@ class Http3Client(
             this.quicChannel,
             ClientDataHandler(this, request)
         )
+    }
+
+    fun addRoute(path: String, method: HttpMethod, handler: Consumer<HttpResponseContext>) {
+        routeRegistry.register(Route(path, method, handler))
     }
 
     fun connection(): Http3Connection = this.connection

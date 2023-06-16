@@ -5,6 +5,7 @@ import com.bethibande.web.config.HttpServerConfig
 import com.bethibande.web.execution.ThreadPoolExecutor
 import com.bethibande.web.impl.http3.context.Http3ResponseContext
 import com.bethibande.web.impl.http3.handler.ServerConnectionHandler
+import com.bethibande.web.request.HttpResponseContext
 import com.bethibande.web.routes.Route
 import com.bethibande.web.routes.RouteRegistry
 import com.bethibande.web.types.Registration
@@ -25,7 +26,7 @@ import java.util.function.Consumer
 class Http3Server(
     private val executor: ThreadPoolExecutor,
     private val sslContext: QuicSslContext
-): HttpServer<HttpServerConfig, Http3ResponseContext> {
+): HttpServer<HttpServerConfig> {
 
     companion object {
         const val INITIAL_MAX_DATA: Long = 4096
@@ -92,7 +93,7 @@ class Http3Server(
         group.shutdownGracefully().sync()
     }
 
-    override fun addRoute(path: String, method: HttpMethod?, handler: Consumer<Http3ResponseContext>) {
+    override fun addRoute(path: String, method: HttpMethod?, handler: Consumer<HttpResponseContext>) {
         routes.register(Route(path, method, handler))
     }
 

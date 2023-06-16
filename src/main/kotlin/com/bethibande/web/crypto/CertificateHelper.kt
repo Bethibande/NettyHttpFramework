@@ -2,12 +2,26 @@ package com.bethibande.web.crypto
 
 import org.apache.commons.codec.binary.Base64
 import java.io.IOException
+import java.nio.file.Path
 import java.security.GeneralSecurityException
 import java.security.KeyFactory
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.security.interfaces.RSAPrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
+import kotlin.io.path.inputStream
 
-object KeyHelper {
+object CertificateHelper {
+
+    /**
+     * Used to load a X509 certificate from a .pem file
+     */
+    fun getCertificateFromString(path: Path): X509Certificate {
+        val cf = CertificateFactory.getInstance("X.509")
+        path.inputStream().use { stream ->
+            return cf.generateCertificate(stream) as X509Certificate
+        }
+    }
 
     /**
      * Used to load <b>unencrypted</b> rsa .pem private keys

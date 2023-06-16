@@ -26,6 +26,7 @@ abstract class HttpContextBase(
     companion object {
         const val STATE_HEADER_RECEIVED = 0x01
         const val STATE_HEADER_SENT = 0x02
+        const val STATE_CLOSE_SET = 0x04
     }
 
     private val headerListener = FieldListener<AbstractHttpHeader>()
@@ -180,8 +181,10 @@ abstract class HttpContextBase(
     abstract fun closeContext()
 
     fun close() {
+        if(has(STATE_CLOSE_SET)) throw IllegalStateException("A close operation is already in progress")
         if(has(STATE_CLOSED)) throw IllegalStateException("The context has already been closed")
         if(has(STATE_HEADER_SENT)) throw IllegalStateException("Cannot close context before sending a header")
+        set(STATE_CLOSE_SET)
 
         this.lastWrite!!.addListener {
             this.closeContext()
