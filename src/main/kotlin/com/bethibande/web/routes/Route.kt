@@ -8,30 +8,39 @@ class Route(
     val path: String,
     val method: HttpMethod? = null,
     val handler: Consumer<HttpResponseContext>? = null,
-    val pathTokens: Array<String> = path.split(PATH_SEPARATOR).toTypedArray(),
+    val pathTokens: Array<PathNode> = pathToTokens(path),
     val vars: Map<String, Int> = this.findVariableIndexes(pathTokens)
 ) {
 
     companion object {
 
-        val PATH_SEPARATOR = Regex("//?")
+        val PATH_SEPARATOR = Regex("/+")
         const val VAR_PREFIX = ":"
-        const val VAR_REGEX = "[^\\/]+"
 
-        fun findVariableIndexes(tokens: Array<String>): Map<String, Int> = tokens
-            .filter { it.startsWith(VAR_PREFIX) }
-            .associate { it.substring(1) to tokens.indexOf(it) }
-    }
-
-    init {
-        this.replaceVarsWithRegex()
-    }
-
-    private fun replaceVarsWithRegex() {
-        this.vars.values.forEach {
-            this.pathTokens[it] = VAR_REGEX
+        fun pathToTokens(path: String): Array<PathNode> {
+            return path.split(PATH_SEPARATOR)
+                .map(::toNode)
+                .toTypedArray()
         }
+
+        fun toNode(node: String): PathNode {
+            if(node.startsWith(VAR_PREFIX)) {
+                return VarPathNode(
+                    node,
+                    ".*"
+                )
+            }
+
+            return PathNode(node)
+        }
+
+        fun findVariableIndexes(tokens: Array<PathNode>): Map<String, Int> = tokens
+            .filterIsInstance<VarPathNode>()
+            .associate { it.value to tokens.indexOf(it) }
     }
 
+    fun parseVariables(path: Array<String>): Map<String, String> {
+        return vars.mapValues { entry -> path[entry.value] }
+    }
 
 }

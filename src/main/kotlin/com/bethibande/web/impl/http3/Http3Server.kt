@@ -26,7 +26,7 @@ import java.util.function.Consumer
 class Http3Server(
     private val executor: ThreadPoolExecutor,
     private val sslContext: QuicSslContext
-): HttpServer<HttpServerConfig> {
+): HttpServer {
 
     companion object {
         const val INITIAL_MAX_DATA: Long = 4096
@@ -66,6 +66,25 @@ class Http3Server(
 
     private fun removeConnection(connection: Http3Connection) {
         this.connections.add(connection)
+    }
+
+    internal fun acceptRequest(context: Http3ResponseContext) {
+        context.onHeader { header ->
+            val path = header.getPath()!!.split(HttpServer.PATH_REGEX).toTypedArray()
+            val routes = routes.get(path).iterator()
+
+            do {
+                val route = routes.next()
+
+                if(route.method != null && route.method != header.getMethod()) continue
+                if(route.handler == null) continue
+
+                context.variables(route.parseVariables(path))
+                route.handler.accept(context)
+
+                if(!context.isOpen()) break
+            } while(routes.hasNext())
+        }
     }
 
     override fun bindInterface(address: InetSocketAddress): Registration<ChannelFuture> {

@@ -12,7 +12,7 @@ class TreeMap<K, V: Any>(
         this.root.put(key, 0, value)
     }
 
-    fun find(key: Array<K>): List<V> {
+    fun find(key: Array<*>): List<V> {
         if(key.isEmpty()) throw IllegalArgumentException("The given key must have at least one element")
         val results = ArrayList<V>()
 

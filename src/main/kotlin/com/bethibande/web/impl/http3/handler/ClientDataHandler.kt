@@ -2,6 +2,7 @@ package com.bethibande.web.impl.http3.handler
 
 import com.bethibande.web.impl.http3.Http3Client
 import com.bethibande.web.impl.http3.context.Http3RequestContext
+import com.bethibande.web.request.HttpRequestContext
 import io.netty.channel.ChannelHandlerContext
 import io.netty.incubator.codec.http3.Http3DataFrame
 import io.netty.incubator.codec.http3.Http3HeadersFrame
@@ -11,7 +12,7 @@ import java.util.function.Consumer
 
 class ClientDataHandler(
     private val client: Http3Client,
-    private val contextCallback: Consumer<Http3RequestContext>
+    private val contextCallback: Consumer<HttpRequestContext>
 ): Http3RequestStreamInboundHandler() {
 
     private var context: Http3RequestContext? = null

@@ -4,7 +4,7 @@ import com.bethibande.web.types.tree.TreeMap
 
 class RouteRegistry {
 
-    private val routes = TreeMap<String, Route>("")
+    private val routes = TreeMap<PathNode, Route>(PathNode(""))
 
     fun register(route: Route) {
         routes.put(route.pathTokens, route)

@@ -1,5 +1,7 @@
 package com.bethibande.web.types.tree
 
+import java.util.*
+
 class TreeEntry<K, V : Any>(
     val key: K,
     var values: Array<Any>,
@@ -38,8 +40,8 @@ class TreeEntry<K, V : Any>(
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun find(key: Array<K>, index: Int, results: MutableList<V>) {
-        if(key[index] != this.key) return
+    fun find(key: Array<*>, index: Int, results: MutableList<V>) {
+        if(Objects.equals(key[index], this.key)) return
         results.addAll(this.values as Array<out V>)
 
         if(index != key.lastIndex) {

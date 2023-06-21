@@ -1,11 +1,12 @@
 package com.bethibande.web.impl.http3
 
 import com.bethibande.web.HttpClient
+import com.bethibande.web.HttpServer
 import com.bethibande.web.config.HttpClientConfig
 import com.bethibande.web.execution.ThreadPoolExecutor
-import com.bethibande.web.impl.http3.context.Http3RequestContext
 import com.bethibande.web.impl.http3.handler.ClientDataHandler
 import com.bethibande.web.impl.http3.handler.ClientPushHandler
+import com.bethibande.web.request.HttpRequestContext
 import com.bethibande.web.request.HttpResponseContext
 import com.bethibande.web.routes.Route
 import com.bethibande.web.routes.RouteRegistry
@@ -24,12 +25,11 @@ import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
-// TODO: register client streams
 class Http3Client(
     private val address: InetSocketAddress,
     private val sslContext: QuicSslContext,
     private val executor: ThreadPoolExecutor
-): HttpClient<HttpClientConfig, Http3Connection, Http3RequestContext> {
+): HttpClient {
 
     private val config = HttpClientConfig()
 
@@ -66,11 +66,24 @@ class Http3Client(
 
     private val connection = Http3Connection(QuicStreamType.BIDIRECTIONAL, this.quicChannel)
 
-    private val routeRegistry = RouteRegistry()
+    private val routes = RouteRegistry()
 
-    internal fun handlePush(pushContext: HttpResponseContext) {
-        pushContext.onHeader {
-            // TODO: handle, RequestHandler interface?
+    internal fun handlePush(context: HttpResponseContext) { // TODO: interface class RequestHandler
+        context.onHeader { header ->
+            val path = header.getPath()!!.split(HttpServer.PATH_REGEX).toTypedArray()
+            val routes = routes.get(path).iterator()
+
+            do {
+                val route = routes.next()
+
+                if(route.method != null && route.method != header.getMethod()) continue
+                if(route.handler == null) continue
+
+                context.variables(route.parseVariables(path))
+                route.handler.accept(context)
+
+                if(!context.isOpen()) break
+            } while(routes.hasNext())
         }
     }
 
@@ -84,15 +97,15 @@ class Http3Client(
 
     override fun canRequest(): Boolean = this.quicChannel.peerAllowedStreams(QuicStreamType.BIDIRECTIONAL) > 0
 
-    override fun newRequest(request: Consumer<Http3RequestContext>) {
+    override fun request(handler: Consumer<HttpRequestContext>) {
         Http3.newRequestStream(
             this.quicChannel,
-            ClientDataHandler(this, request)
+            ClientDataHandler(this, handler)
         )
     }
 
     fun addRoute(path: String, method: HttpMethod, handler: Consumer<HttpResponseContext>) {
-        routeRegistry.register(Route(path, method, handler))
+        routes.register(Route(path, method, handler))
     }
 
     fun connection(): Http3Connection = this.connection

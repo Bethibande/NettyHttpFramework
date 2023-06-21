@@ -10,7 +10,6 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelProgressivePromise
 import io.netty.handler.codec.Headers
-import io.netty.util.concurrent.Future
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -36,6 +35,8 @@ abstract class HttpContextBase(
 
     @Volatile
     protected var lastWrite: ChannelFuture? = null
+
+    protected var variables: Map<String, String> = mapOf()
 
     fun connection(): HttpConnection = this.connection
     fun closeFuture(): ChannelFuture = this.channel.closeFuture()
@@ -178,6 +179,12 @@ abstract class HttpContextBase(
         channel.flush()
     }
 
+    fun variables(variables: Map<String, String>) {
+        this.variables = variables
+    }
+
+    fun variables(): Map<String, String> = this.variables
+
     abstract fun closeContext()
 
     fun close() {
@@ -199,5 +206,9 @@ abstract class HttpContextBase(
         // TODO: apply default headers
         return header
     }
+
+    fun isOpen() = !has(STATE_CLOSED) && !has(STATE_CLOSE_SET)
+    fun isClosed() = has(STATE_CLOSED)
+    fun isClosing() = has(STATE_CLOSE_SET)
 
 }

@@ -8,7 +8,11 @@ import io.netty.handler.codec.http.HttpMethod
 import java.net.InetSocketAddress
 import java.util.function.Consumer
 
-interface HttpServer<C: HttpServerConfig> {
+interface HttpServer {
+
+    companion object {
+        val PATH_REGEX = Regex("//?")
+    }
 
     /**
      * Binds a new network interface
@@ -26,6 +30,6 @@ interface HttpServer<C: HttpServerConfig> {
      */
     fun addRoute(path: String, method: HttpMethod? = null, handler: Consumer<HttpResponseContext>)
 
-    fun configure(consumer: Consumer<C>)
+    fun configure(consumer: Consumer<HttpServerConfig>)
 
 }
