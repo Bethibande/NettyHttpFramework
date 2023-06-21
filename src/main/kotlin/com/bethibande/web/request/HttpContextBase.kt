@@ -19,13 +19,15 @@ import java.util.function.Function
 
 abstract class HttpContextBase(
     protected open val connection: HttpConnection,
-    protected open val channel: Channel
+    protected open val channel: Channel,
+    protected open val readOnly: Boolean = false,
 ): HasState() {
 
     companion object {
         const val STATE_HEADER_RECEIVED = 0x01
         const val STATE_HEADER_SENT = 0x02
         const val STATE_CLOSE_SET = 0x04
+        const val STATE_READ_ONLY = 0x08
     }
 
     private val headerListener = FieldListener<AbstractHttpHeader>()
@@ -120,6 +122,8 @@ abstract class HttpContextBase(
     }
 
     protected fun writeAndFlush(obj: Any): ChannelFuture = this.access { channel ->
+        if(this.readOnly) throw IllegalStateException("The context is read-only.")
+
         val future = channel.writeAndFlush(obj)
         this.lastWrite = future
 
@@ -127,6 +131,8 @@ abstract class HttpContextBase(
     }
 
     protected fun write(obj: Any): ChannelFuture = this.access { channel ->
+        if(this.readOnly) throw IllegalStateException("The context is read-only.")
+
         val future = channel.write(obj)
         this.lastWrite = future
 

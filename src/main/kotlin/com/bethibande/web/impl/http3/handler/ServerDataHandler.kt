@@ -8,7 +8,6 @@ import io.netty.incubator.codec.http3.Http3HeadersFrame
 import io.netty.incubator.codec.http3.Http3RequestStreamInboundHandler
 
 class ServerDataHandler(
-    private val connection: Http3Connection,
     private val context: Http3ResponseContext
 ): Http3RequestStreamInboundHandler() {
 

@@ -16,6 +16,6 @@ class ServerConnectionHandler(
         val connection = Http3Connection(QuicStreamType.UNIDIRECTIONAL, p0)
         this.server.addConnection(connection)
 
-        p0.pipeline().addLast(ServerStreamHandler(connection))
+        p0.pipeline().addLast(ServerStreamHandler(server, connection))
     }
 }

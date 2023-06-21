@@ -6,6 +6,7 @@ import com.bethibande.web.execution.ThreadPoolExecutor
 import com.bethibande.web.impl.http3.context.Http3ResponseContext
 import com.bethibande.web.impl.http3.handler.ServerConnectionHandler
 import com.bethibande.web.request.HttpResponseContext
+import com.bethibande.web.request.RequestHandler
 import com.bethibande.web.routes.Route
 import com.bethibande.web.routes.RouteRegistry
 import com.bethibande.web.types.Registration
@@ -26,7 +27,7 @@ import java.util.function.Consumer
 class Http3Server(
     private val executor: ThreadPoolExecutor,
     private val sslContext: QuicSslContext
-): HttpServer {
+): HttpServer, RequestHandler() {
 
     companion object {
         const val INITIAL_MAX_DATA: Long = 4096
@@ -47,7 +48,7 @@ class Http3Server(
     }
 
     private fun initCodec(): ChannelHandler {
-        return Http3.newQuicServerCodecBuilder()
+        return Http3.newQuicServerCodecBuilder() // TODO: configuration
             .sslContext(this.sslContext)
             .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
             .initialMaxData(INITIAL_MAX_DATA)
@@ -59,6 +60,8 @@ class Http3Server(
             .build()
     }
 
+    override fun getRoutes(): RouteRegistry = this.routes
+
     internal fun addConnection(connection: Http3Connection) {
         this.connections.add(connection)
         connection.channel().closeFuture().addListener { this.removeConnection(connection) }
@@ -66,25 +69,6 @@ class Http3Server(
 
     private fun removeConnection(connection: Http3Connection) {
         this.connections.add(connection)
-    }
-
-    internal fun acceptRequest(context: Http3ResponseContext) {
-        context.onHeader { header ->
-            val path = header.getPath()!!.split(HttpServer.PATH_REGEX).toTypedArray()
-            val routes = routes.get(path).iterator()
-
-            do {
-                val route = routes.next()
-
-                if(route.method != null && route.method != header.getMethod()) continue
-                if(route.handler == null) continue
-
-                context.variables(route.parseVariables(path))
-                route.handler.accept(context)
-
-                if(!context.isOpen()) break
-            } while(routes.hasNext())
-        }
     }
 
     override fun bindInterface(address: InetSocketAddress): Registration<ChannelFuture> {

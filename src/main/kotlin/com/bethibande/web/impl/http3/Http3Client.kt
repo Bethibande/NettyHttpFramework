@@ -8,6 +8,7 @@ import com.bethibande.web.impl.http3.handler.ClientDataHandler
 import com.bethibande.web.impl.http3.handler.ClientPushHandler
 import com.bethibande.web.request.HttpRequestContext
 import com.bethibande.web.request.HttpResponseContext
+import com.bethibande.web.request.RequestHandler
 import com.bethibande.web.routes.Route
 import com.bethibande.web.routes.RouteRegistry
 import io.netty.bootstrap.Bootstrap
@@ -29,7 +30,7 @@ class Http3Client(
     private val address: InetSocketAddress,
     private val sslContext: QuicSslContext,
     private val executor: ThreadPoolExecutor
-): HttpClient {
+): HttpClient, RequestHandler() {
 
     private val config = HttpClientConfig()
 
@@ -52,7 +53,7 @@ class Http3Client(
         .sync()
         .channel()
 
-    private val quicChannel: QuicChannel = QuicChannel.newBootstrap(channel)
+    private val quicChannel: QuicChannel = QuicChannel.newBootstrap(channel) // TODO: configuration
         .handler(Http3ClientConnectionHandler(
             null,
             this::initPushHandler,
@@ -68,24 +69,7 @@ class Http3Client(
 
     private val routes = RouteRegistry()
 
-    internal fun handlePush(context: HttpResponseContext) { // TODO: interface class RequestHandler
-        context.onHeader { header ->
-            val path = header.getPath()!!.split(HttpServer.PATH_REGEX).toTypedArray()
-            val routes = routes.get(path).iterator()
-
-            do {
-                val route = routes.next()
-
-                if(route.method != null && route.method != header.getMethod()) continue
-                if(route.handler == null) continue
-
-                context.variables(route.parseVariables(path))
-                route.handler.accept(context)
-
-                if(!context.isOpen()) break
-            } while(routes.hasNext())
-        }
-    }
+    override fun getRoutes(): RouteRegistry = this.routes
 
     private fun initPushHandler(pushId: Long): ChannelHandler = ClientPushHandler(this)
 

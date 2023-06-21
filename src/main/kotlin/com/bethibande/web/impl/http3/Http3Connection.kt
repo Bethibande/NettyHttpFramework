@@ -4,6 +4,7 @@ import com.bethibande.web.HttpConnection
 import com.bethibande.web.impl.http3.context.Http3RequestContext
 import com.bethibande.web.impl.http3.context.Http3ResponseContext
 import com.bethibande.web.request.HttpContextBase
+import com.bethibande.web.request.HttpRequestContext
 import com.bethibande.web.types.CanRequest
 import com.bethibande.web.types.HasState
 import io.netty.channel.ChannelFuture
@@ -22,7 +23,7 @@ class Http3Connection(
     private val requestStreamType: QuicStreamType,
     private val channel: QuicChannel,
     private val pushStreamManager: Http3ServerPushStreamManager? = null
-): HttpConnection, AttributeMap, HasState(), CanRequest<Http3RequestContext> {
+): HttpConnection, AttributeMap, HasState(), CanRequest {
 
     private var address: InetSocketAddress? = null
 
@@ -45,7 +46,7 @@ class Http3Connection(
 
     override fun canRequest(): Boolean = this.channel.peerAllowedStreams(this.requestStreamType) > 0
 
-    override fun newRequest(request: Consumer<Http3RequestContext>) {
+    override fun request(request: Consumer<HttpRequestContext>) {
         if(pushStreamManager != null) {
             val pushId = pushStreamManager.reserveNextPushId()
             val futureStream: Future<QuicStreamChannel> = pushStreamManager.newPushStream(pushId, null) // TODO: channel handler to handle cancel frame from client

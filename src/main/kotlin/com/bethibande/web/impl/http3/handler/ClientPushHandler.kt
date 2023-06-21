@@ -12,6 +12,6 @@ class ClientPushHandler(
     override fun initPushStream(ch: QuicStreamChannel) {
         val context = Http3ResponseContext(this.client.connection(), ch)
 
-        client.handlePush(context)
+        client.handleRequest(context)
     }
 }

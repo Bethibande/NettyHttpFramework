@@ -16,9 +16,11 @@ class ServerStreamHandler(
 
     override fun initChannel(p0: QuicStreamChannel) {
         val context = Http3ResponseContext(connection, p0)
+
         this.connection.addStream(context)
-        this.server.acceptRequest(context)
-        p0.pipeline().addLast(ServerDataHandler(this.connection, context))
+        this.server.handleRequest(context)
+
+        p0.pipeline().addLast(ServerDataHandler(context))
     }
 
     override fun userEventTriggered(ctx: ChannelHandlerContext?, evt: Any?) {
