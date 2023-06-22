@@ -6,9 +6,7 @@ import com.bethibande.web.config.HttpClientConfig
 import com.bethibande.web.execution.ThreadPoolExecutor
 import com.bethibande.web.impl.http3.handler.ClientDataHandler
 import com.bethibande.web.impl.http3.handler.ClientPushHandler
-import com.bethibande.web.request.HttpRequestContext
-import com.bethibande.web.request.HttpResponseContext
-import com.bethibande.web.request.RequestHandler
+import com.bethibande.web.request.*
 import com.bethibande.web.routes.Route
 import com.bethibande.web.routes.RouteRegistry
 import io.netty.bootstrap.Bootstrap
@@ -22,6 +20,8 @@ import io.netty.incubator.codec.http3.Http3ClientConnectionHandler
 import io.netty.incubator.codec.quic.QuicChannel
 import io.netty.incubator.codec.quic.QuicSslContext
 import io.netty.incubator.codec.quic.QuicStreamType
+import io.netty.util.concurrent.DefaultPromise
+import io.netty.util.concurrent.Future
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
@@ -81,11 +81,19 @@ class Http3Client(
 
     override fun canRequest(): Boolean = this.quicChannel.peerAllowedStreams(QuicStreamType.BIDIRECTIONAL) > 0
 
-    override fun request(handler: Consumer<HttpRequestContext>) {
+    override fun <R> request(handler: RequestHook<R>): Future<R> {
+        val future = DefaultPromise<R>(this.quicChannel.eventLoop())
+
         Http3.newRequestStream(
             this.quicChannel,
-            ClientDataHandler(this, handler)
+            ClientDataHandler(this, handler, future)
         )
+
+        return future
+    }
+
+    fun <R> prepareRequest(method: HttpMethod, path: String, handler: RequestHook<R>): PreparedRequest<R> {
+        return PreparedRequest(method, path, handler, this)
     }
 
     fun addRoute(path: String, method: HttpMethod, handler: Consumer<HttpResponseContext>) {

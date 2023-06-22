@@ -1,11 +1,11 @@
 package com.bethibande.web.types
 
-import com.bethibande.web.request.HttpRequestContext
-import java.util.function.Consumer
+import com.bethibande.web.request.RequestHook
+import io.netty.util.concurrent.Promise
 
 interface CanRequest {
 
-    fun request(consumer: Consumer<HttpRequestContext>)
+    fun <R> request(consumer: RequestHook<R>): Promise<R>
     fun canRequest(): Boolean
 
 }

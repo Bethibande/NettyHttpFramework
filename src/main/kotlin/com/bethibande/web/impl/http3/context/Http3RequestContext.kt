@@ -10,11 +10,13 @@ import io.netty.incubator.codec.http3.DefaultHttp3DataFrame
 import io.netty.incubator.codec.http3.DefaultHttp3Headers
 import io.netty.incubator.codec.http3.Http3Headers
 import io.netty.incubator.codec.quic.QuicStreamChannel
+import io.netty.util.concurrent.Promise
 
-class Http3RequestContext(
+class Http3RequestContext<R>(
     connection: Http3Connection,
-    override val channel: QuicStreamChannel
-): HttpRequestContext(connection, channel) {
+    override val channel: QuicStreamChannel,
+    promise: Promise<R>
+): HttpRequestContext<R>(connection, channel, promise) {
 
     override fun convertNettyHeaders(headers: Headers<*, *, *>): Http3Header = Http3Header(headers as Http3Headers)
 
