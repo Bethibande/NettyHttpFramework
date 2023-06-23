@@ -3,6 +3,7 @@ package com.bethibande.web.impl.http3
 import com.bethibande.web.request.AbstractHttpHeader
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.handler.codec.http.HttpScheme
 import io.netty.incubator.codec.http3.DefaultHttp3HeadersFrame
 import io.netty.incubator.codec.http3.Http3Headers
 
@@ -34,6 +35,10 @@ class Http3Header(
         this.headers.path(path)
     }
 
+    override fun setScheme(scheme: HttpScheme) {
+        this.headers.scheme(scheme.name())
+    }
+
     override fun setMethod(method: HttpMethod) {
         this.headers.method(method.toString())
     }
@@ -48,6 +53,12 @@ class Http3Header(
 
     override fun setContentLength(length: Long) {
         this.set("content-length", length)
+    }
+
+    override fun getScheme(): HttpScheme? {
+        val str = this.headers.scheme()
+
+        return if (str == HttpScheme.HTTPS.name()) HttpScheme.HTTPS else HttpScheme.HTTP
     }
 
     override fun getPath(): String? = this.headers.path()?.toString()

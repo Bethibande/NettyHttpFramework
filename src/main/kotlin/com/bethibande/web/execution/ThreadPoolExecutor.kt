@@ -1,6 +1,5 @@
 package com.bethibande.web.execution
 
-import java.lang.IllegalStateException
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture

@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>NettyHttpServer</artifactId>
     <groupId>com.bethibande</groupId>
-    <version>netty-http</version>
+    <artifactId>NettyHttpServer</artifactId>
+    <version>1.0</version>
     <packaging>jar</packaging>
 
     <name>consoleApp</name>
@@ -19,7 +19,7 @@
 
         <netty.version>4.1.93.Final</netty.version>
         <netty.build.version>31</netty.build.version>
-        <netty.quic.version>0.0.43.Final</netty.quic.version>
+        <netty.quic.version>0.0.46.Final</netty.quic.version>
         <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
     </properties>
 

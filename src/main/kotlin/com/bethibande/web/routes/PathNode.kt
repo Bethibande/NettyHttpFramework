@@ -4,8 +4,10 @@ open class PathNode(
     val value: String,
 ) {
 
-    override fun equals(other: Any?): Boolean {
-        return this.value.equals(other)
+    override operator fun equals(other: Any?): Boolean {
+        if(other == null || other !is PathNode) return false
+
+        return this.value.equals(other.value)
     }
 
 }

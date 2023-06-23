@@ -5,7 +5,6 @@ import com.bethibande.web.impl.http3.Http3Header
 import com.bethibande.web.request.HttpResponseContext
 import io.netty.buffer.ByteBuf
 import io.netty.handler.codec.Headers
-import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.incubator.codec.http3.DefaultHttp3DataFrame
 import io.netty.incubator.codec.http3.DefaultHttp3Headers
 import io.netty.incubator.codec.http3.Http3Headers

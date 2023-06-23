@@ -1,6 +1,5 @@
 package com.bethibande.web.impl.http3.handler
 
-import com.bethibande.web.impl.http3.Http3Connection
 import com.bethibande.web.impl.http3.context.Http3ResponseContext
 import io.netty.channel.ChannelHandlerContext
 import io.netty.incubator.codec.http3.Http3DataFrame

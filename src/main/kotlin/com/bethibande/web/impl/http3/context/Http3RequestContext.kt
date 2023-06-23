@@ -2,7 +2,6 @@ package com.bethibande.web.impl.http3.context
 
 import com.bethibande.web.impl.http3.Http3Connection
 import com.bethibande.web.impl.http3.Http3Header
-import com.bethibande.web.request.HttpContextBase
 import com.bethibande.web.request.HttpRequestContext
 import io.netty.buffer.ByteBuf
 import io.netty.handler.codec.Headers

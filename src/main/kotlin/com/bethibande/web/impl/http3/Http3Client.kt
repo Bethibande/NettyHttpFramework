@@ -1,9 +1,9 @@
 package com.bethibande.web.impl.http3
 
 import com.bethibande.web.HttpClient
-import com.bethibande.web.HttpServer
 import com.bethibande.web.config.HttpClientConfig
 import com.bethibande.web.execution.ThreadPoolExecutor
+import com.bethibande.web.impl.http3.context.Http3RequestContext
 import com.bethibande.web.impl.http3.handler.ClientDataHandler
 import com.bethibande.web.impl.http3.handler.ClientPushHandler
 import com.bethibande.web.request.*
@@ -19,9 +19,10 @@ import io.netty.incubator.codec.http3.Http3
 import io.netty.incubator.codec.http3.Http3ClientConnectionHandler
 import io.netty.incubator.codec.quic.QuicChannel
 import io.netty.incubator.codec.quic.QuicSslContext
+import io.netty.incubator.codec.quic.QuicStreamChannel
 import io.netty.incubator.codec.quic.QuicStreamType
 import io.netty.util.concurrent.DefaultPromise
-import io.netty.util.concurrent.Future
+import io.netty.util.concurrent.Promise
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
@@ -69,6 +70,10 @@ class Http3Client(
 
     private val routes = RouteRegistry()
 
+    init {
+        connection.updateAddress(this.address)
+    }
+
     override fun getRoutes(): RouteRegistry = this.routes
 
     private fun initPushHandler(pushId: Long): ChannelHandler = ClientPushHandler(this)
@@ -81,15 +86,20 @@ class Http3Client(
 
     override fun canRequest(): Boolean = this.quicChannel.peerAllowedStreams(QuicStreamType.BIDIRECTIONAL) > 0
 
-    override fun <R> request(handler: RequestHook<R>): Future<R> {
-        val future = DefaultPromise<R>(this.quicChannel.eventLoop())
+    override fun <R> request(handler: RequestHook<R>): Promise<R> {
+        val promise = DefaultPromise<R>(this.quicChannel.eventLoop())
+        val streamHandler = ClientDataHandler<R>()
 
         Http3.newRequestStream(
             this.quicChannel,
-            ClientDataHandler(this, handler, future)
-        )
+            streamHandler
+        ).addListener { future ->
+            val context = Http3RequestContext<R>(connection(), future.get() as QuicStreamChannel, promise)
+            streamHandler.setContext(context)
+            handler.handle(context)
+        }
 
-        return future
+        return promise
     }
 
     fun <R> prepareRequest(method: HttpMethod, path: String, handler: RequestHook<R>): PreparedRequest<R> {

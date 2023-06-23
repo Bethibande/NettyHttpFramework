@@ -5,6 +5,7 @@ import com.bethibande.web.impl.http3.context.Http3RequestContext
 import com.bethibande.web.impl.http3.context.Http3ResponseContext
 import com.bethibande.web.request.HttpContextBase
 import com.bethibande.web.request.HttpRequestContext
+import com.bethibande.web.request.RequestHook
 import com.bethibande.web.types.CanRequest
 import com.bethibande.web.types.HasState
 import io.netty.channel.ChannelFuture
@@ -15,7 +16,9 @@ import io.netty.incubator.codec.quic.QuicStreamType
 import io.netty.util.Attribute
 import io.netty.util.AttributeKey
 import io.netty.util.AttributeMap
+import io.netty.util.concurrent.DefaultPromise
 import io.netty.util.concurrent.Future
+import io.netty.util.concurrent.Promise
 import java.net.InetSocketAddress
 import java.util.function.Consumer
 
@@ -46,23 +49,27 @@ class Http3Connection(
 
     override fun canRequest(): Boolean = this.channel.peerAllowedStreams(this.requestStreamType) > 0
 
-    override fun request(request: Consumer<HttpRequestContext>) {
+    override fun <R> request(handler: RequestHook<R>): Promise<R> {
         if(pushStreamManager != null) {
             val pushId = pushStreamManager.reserveNextPushId()
             val futureStream: Future<QuicStreamChannel> = pushStreamManager.newPushStream(pushId, null) // TODO: channel handler to handle cancel frame from client
 
+            val promise = DefaultPromise<R>(this.channel.eventLoop())
+
             futureStream.addListener {
                 val stream = futureStream.get()
-                val context = Http3RequestContext(this, stream)
+                val context = Http3RequestContext(this, stream, promise)
 
                 this.streams.add(context)
                 context.closeFuture().addListener { this.streams.remove(context) }
 
-                request.accept(context)
+                handler.handle(context)
             }
 
-            return
+            return promise
         }
+
+        throw IllegalStateException("The given connection does not support push requests")
     }
 
     override fun isOpen(): Boolean = !has(STATE_CLOSED)

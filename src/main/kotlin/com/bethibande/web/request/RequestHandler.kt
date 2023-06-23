@@ -12,7 +12,7 @@ abstract class RequestHandler {
             val path = header.getPath()!!.split(HttpServer.PATH_REGEX).toTypedArray()
             val routes = getRoutes().get(path).iterator()
 
-            do {
+            while (routes.hasNext()) {
                 val route = routes.next()
 
                 if(route.method != null && route.method != header.getMethod()) continue
@@ -22,7 +22,7 @@ abstract class RequestHandler {
                 route.handler.accept(context)
 
                 if(!context.isOpen()) break
-            } while(routes.hasNext())
+            }
         }
     }
 

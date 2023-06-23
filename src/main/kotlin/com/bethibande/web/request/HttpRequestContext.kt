@@ -3,6 +3,7 @@ package com.bethibande.web.request
 import com.bethibande.web.HttpConnection
 import io.netty.channel.Channel
 import io.netty.handler.codec.http.HttpMethod
+import io.netty.handler.codec.http.HttpScheme
 import io.netty.util.concurrent.Promise
 
 abstract class HttpRequestContext<R>(
@@ -18,6 +19,7 @@ abstract class HttpRequestContext<R>(
 
     fun newHeader(method: HttpMethod, path: String): AbstractHttpHeader {
         val header = super.newHeader()
+        header.setScheme(HttpScheme.HTTPS)
         header.setMethod(method)
         header.setPath(path)
         header.setAuthority(connection.getAddress().hostString)

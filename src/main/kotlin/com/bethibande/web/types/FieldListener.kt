@@ -1,11 +1,12 @@
 package com.bethibande.web.types
 
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.function.Consumer
 import kotlin.reflect.KProperty
 
 class FieldListener<T> {
 
-    private val listeners = mutableListOf<Consumer<T>>()
+    private val listeners = ConcurrentLinkedQueue<Consumer<T>>()
 
     @Volatile
     private var value: T? = null;
@@ -17,7 +18,7 @@ class FieldListener<T> {
 
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
         this.value = value
-        this.listeners.forEach { it.accept(value) }
+        this.listeners.iterator().forEach { it.accept(value) }
     }
     
     fun addListener(consumer: Consumer<T>) {

@@ -20,19 +20,20 @@ class ValueQueue<T> {
         }
     }
 
+    @Synchronized
     private fun consume() {
-        this.consumer!!.accept(queue.poll())
+        if(this.consumer == null && size != 0) return
+
         size--
+        val value = queue.poll()
+        this.consumer!!.accept(value)
     }
 
-    @Synchronized
     fun offer(value: T) {
         this.queue.offer(value)
-
-        if(size == 0 && this.consumer != null) {
-            this.consume()
-        }
         size++
+
+        this.consume()
     }
 
     fun hasConsumer(): Boolean = this.consumer != null

@@ -24,10 +24,10 @@ abstract class HttpContextBase(
 ): HasState() {
 
     companion object {
-        const val STATE_HEADER_RECEIVED = 0x01
-        const val STATE_HEADER_SENT = 0x02
-        const val STATE_CLOSE_SET = 0x04
-        const val STATE_READ_ONLY = 0x08
+        const val STATE_HEADER_RECEIVED = 0x02
+        const val STATE_HEADER_SENT = 0x04
+        const val STATE_CLOSE_SET = 0x08
+        const val STATE_READ_ONLY = 0x10 // TODO: use
     }
 
     private val headerListener = FieldListener<AbstractHttpHeader>()
@@ -82,8 +82,13 @@ abstract class HttpContextBase(
         val promise = this.channel.newProgressivePromise()
 
         onData { data ->
+            if(data.writerIndex() == 0) { // empty buffer
+                return@onData
+            }
+
             read += data.writerIndex()
             buffer.writeBytes(data)
+            data.release()
 
             promise.setProgress(read.toLong(), length.toLong())
             if(read == length) {
@@ -191,12 +196,12 @@ abstract class HttpContextBase(
 
     fun variables(): Map<String, String> = this.variables
 
-    abstract fun closeContext()
+    protected abstract fun closeContext()
 
     fun close() {
         if(has(STATE_CLOSE_SET)) throw IllegalStateException("A close operation is already in progress")
         if(has(STATE_CLOSED)) throw IllegalStateException("The context has already been closed")
-        if(has(STATE_HEADER_SENT)) throw IllegalStateException("Cannot close context before sending a header")
+        if(!has(STATE_HEADER_SENT)) throw IllegalStateException("Cannot close context before sending a header")
         set(STATE_CLOSE_SET)
 
         this.lastWrite!!.addListener {
