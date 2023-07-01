@@ -90,7 +90,7 @@ class Http3Client(
         }
     }
 
-    fun newConnection(): Promise<Http3Connection> {
+    override fun newConnection(): Promise<Http3Connection> {
         val promise = DefaultPromise<Http3Connection>(this.group.next())
 
         try {
