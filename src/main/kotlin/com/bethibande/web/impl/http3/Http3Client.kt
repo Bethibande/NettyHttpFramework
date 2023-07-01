@@ -11,6 +11,7 @@ import com.bethibande.web.routes.Route
 import com.bethibande.web.routes.RouteRegistry
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.Channel
+import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandler
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioDatagramChannel
@@ -22,6 +23,7 @@ import io.netty.incubator.codec.quic.QuicSslContext
 import io.netty.incubator.codec.quic.QuicStreamChannel
 import io.netty.incubator.codec.quic.QuicStreamType
 import io.netty.util.concurrent.DefaultPromise
+import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.Promise
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
@@ -31,52 +33,97 @@ class Http3Client(
     private val address: InetSocketAddress,
     private val sslContext: QuicSslContext,
     private val executor: ThreadPoolExecutor
-): HttpClient, RequestHandler() {
+) : HttpClient, RequestHandler() {
 
     private val config = HttpClientConfig()
 
     private val group = NioEventLoopGroup(this.executor.threadMaxCount(), this.executor)
 
-    private val codec = Http3.newQuicClientCodecBuilder()
-        .sslContext(sslContext)
-        .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
-        .initialMaxData(10000000)
-        .initialMaxStreamDataBidirectionalLocal(1000000)
-        .initialMaxStreamsUnidirectional(1000000)
-        .build()
-
-    private val bs = Bootstrap()
-
-    private val channel: Channel = bs.group(this.group)
-        .channel(NioDatagramChannel::class.java)
-        .handler(codec)
-        .bind(0)
-        .sync()
-        .channel()
-
-    private val quicChannel: QuicChannel = QuicChannel.newBootstrap(channel) // TODO: configuration
-        .handler(Http3ClientConnectionHandler(
-            null,
-            this::initPushHandler,
-            null,
-            null,
-            true
-        ))
-        .remoteAddress(this.address)
-        .connect()
-        .get()
-
-    private val connection = Http3Connection(QuicStreamType.BIDIRECTIONAL, this.quicChannel)
+    private val connections = mutableListOf<Http3Connection>()
 
     private val routes = RouteRegistry()
 
-    init {
-        connection.updateAddress(this.address)
+    private fun createHttp3Connection(future: Future<*>, promise: Promise<Http3Connection>) {
+        if (!future.isSuccess) {
+            promise.setFailure(future.cause())
+            return
+        }
+
+        try {
+            val quicChannel = future.get() as QuicChannel
+            val connection = Http3Connection(QuicStreamType.BIDIRECTIONAL, quicChannel)
+            connection.updateAddress(this.address)
+
+            this.connections.add(connection)
+            quicChannel.closeFuture().addListener { this.connections.remove(connection) }
+
+            promise.setSuccess(connection)
+        } catch (th: Throwable) {
+            promise.setFailure(th)
+        }
     }
+
+    private fun initiateQuicConnection(future: Future<*>, promise: Promise<Http3Connection>) {
+        if (!future.isSuccess) {
+            promise.setFailure(future.cause())
+            return
+        }
+        if (future !is ChannelFuture) return
+
+        try {
+            val channel = future.channel()
+            val clientHandler = Http3ClientConnectionHandler(
+                null,
+                { this.initPushHandler(promise.get()) },
+                null,
+                null,
+                true
+            )
+
+            QuicChannel.newBootstrap(channel)
+                .handler(clientHandler)
+                .remoteAddress(this.address)
+                .connect()
+                .addListener { this.createHttp3Connection(it, promise) }
+        } catch (th: Throwable) {
+            promise.setFailure(th)
+        }
+    }
+
+    fun newConnection(): Promise<Http3Connection> {
+        val promise = DefaultPromise<Http3Connection>(this.group.next())
+
+        try {
+            val codec = Http3.newQuicClientCodecBuilder()
+                .sslContext(sslContext)
+                .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
+                .initialMaxData(10000000)
+                .initialMaxStreamDataBidirectionalLocal(1000000)
+                .initialMaxStreamsUnidirectional(1000000)
+                .build()
+
+            val bootstrap = Bootstrap()
+            bootstrap.group(this.group)
+                .channel(NioDatagramChannel::class.java)
+                .handler(codec)
+                .bind(0)
+                .addListener { this.initiateQuicConnection(it, promise) }
+        } catch (th: Throwable) {
+            promise.setFailure(th)
+        }
+
+        return promise
+    }
+
+    fun useConnection(fn: (Http3Connection) -> Unit) {
+        this.connections.ifEmpty { this.newConnection().sync() }
+        this.connections.firstOrNull()?.let { fn.invoke(it) }
+    }
+
 
     override fun getRoutes(): RouteRegistry = this.routes
 
-    private fun initPushHandler(pushId: Long): ChannelHandler = ClientPushHandler(this)
+    private fun initPushHandler(connection: Http3Connection): ChannelHandler = ClientPushHandler(this, connection)
 
     override fun configure(consumer: Consumer<HttpClientConfig>) {
         consumer.accept(this.config)
@@ -84,19 +131,23 @@ class Http3Client(
 
     fun getAddress(): InetSocketAddress = this.address
 
-    override fun canRequest(): Boolean = this.quicChannel.peerAllowedStreams(QuicStreamType.BIDIRECTIONAL) > 0
+    override fun canRequest(): Boolean {
+        return this.connections.any { it.channel().peerAllowedStreams(QuicStreamType.BIDIRECTIONAL) > 0 }
+    }
 
     override fun <R> request(handler: RequestHook<R>): Promise<R> {
-        val promise = DefaultPromise<R>(this.quicChannel.eventLoop())
+        val promise = DefaultPromise<R>(this.group.next())
         val streamHandler = ClientDataHandler<R>()
 
-        Http3.newRequestStream(
-            this.quicChannel,
-            streamHandler
-        ).addListener { future ->
-            val context = Http3RequestContext<R>(connection(), future.get() as QuicStreamChannel, promise)
-            streamHandler.setContext(context)
-            handler.handle(context)
+        this.useConnection { connection ->
+            Http3.newRequestStream(
+                connection.channel(),
+                streamHandler
+            ).addListener { future ->
+                val context = Http3RequestContext<R>(connection, future.get() as QuicStreamChannel, promise)
+                streamHandler.setContext(context)
+                handler.handle(context)
+            }
         }
 
         return promise
@@ -110,7 +161,5 @@ class Http3Client(
         routes.register(Route(path, method, handler))
     }
 
-    fun connection(): Http3Connection = this.connection
-
-    override fun getConnections(): Collection<Http3Connection> = listOf(this.connection)
+    override fun getConnections(): Collection<Http3Connection> = this.connections
 }

@@ -13,6 +13,8 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import io.netty.incubator.codec.http3.Http3
 import io.netty.incubator.codec.quic.QuicSslContextBuilder
 import java.net.InetSocketAddress
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.LockSupport
 import kotlin.io.path.Path
 import kotlin.io.path.readText
 
@@ -57,6 +59,14 @@ fun main() {
     val preparedRequest = client.prepareRequest(HttpMethod.GET, "/test/:name", ::clientHandle)
     preparedRequest.request()
         .variable("name", "Max")
+        .execute()
+        .addListener { println("Response: ${it.get() as String}") }
+
+    // connection timeout is 5000, the old implementation would have thrown an exception when sending the request after this 5 sek wait
+    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(5005))
+
+    preparedRequest.request()
+        .variable("name", "Joshua")
         .execute()
         .addListener { println("Response: ${it.get() as String}") }
 }
