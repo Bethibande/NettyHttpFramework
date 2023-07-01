@@ -10,9 +10,15 @@ class Request<R>(
 
     private val variableValues = mutableMapOf<String, String>()
 
-    fun variable(key: String, value: String) {
-        if(value !in preparedRequest.variables.keys) throw IllegalArgumentException("The given key is not a known variable")
-        variableValues[key] = value
+    fun variable(key: String, value: String): Request<R> {
+        val pathKey = ":$key"
+
+        if(pathKey !in preparedRequest.variables.keys) {
+            throw IllegalArgumentException("The given key is not a known variable")
+        }
+
+        variableValues[pathKey] = value
+        return this
     }
 
     fun execute(): Promise<R> {
@@ -24,7 +30,7 @@ class Request<R>(
             pathTokens[index] = value
         }
 
-        val path = pathTokens.joinToString(separator = "/", prefix = "/")
+        val path = pathTokens.joinToString(separator = "/")
 
         return this.preparedRequest.client.request {
             val header = it.newHeader(this@Request.preparedRequest.method, path)

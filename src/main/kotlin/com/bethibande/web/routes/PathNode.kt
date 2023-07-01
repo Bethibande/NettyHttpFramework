@@ -20,6 +20,6 @@ class VarPathNode(
     private val _regex: Regex = Regex(this.regex)
 
     override fun equals(other: Any?): Boolean {
-        return other is CharSequence && this._regex.matches(other)
+        return other is PathNode && other.value.matches(this._regex)
     }
 }

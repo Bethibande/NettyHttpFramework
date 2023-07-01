@@ -9,7 +9,7 @@ class Route(
     val method: HttpMethod? = null,
     val handler: Consumer<HttpResponseContext>? = null,
     val pathTokens: Array<PathNode> = pathToTokens(path),
-    val vars: Map<String, Int> = this.findVariableIndexes(pathTokens)
+    private val vars: Map<String, Int> = findVariableIndexes(pathTokens)
 ) {
 
     companion object {
@@ -23,7 +23,7 @@ class Route(
                 .toTypedArray()
         }
 
-        fun toNode(node: String): PathNode {
+        private fun toNode(node: String): PathNode {
             if(node.startsWith(VAR_PREFIX)) {
                 return VarPathNode(
                     node,
@@ -34,9 +34,10 @@ class Route(
             return PathNode(node)
         }
 
-        fun findVariableIndexes(tokens: Array<PathNode>): Map<String, Int> = tokens
-            .filterIsInstance<VarPathNode>()
-            .associate { it.value to tokens.indexOf(it) }
+        fun findVariableIndexes(tokens: Array<PathNode>): Map<String, Int> =
+            tokens.mapIndexed { index, pathNode -> pathNode to index }
+            .filter { it.first is VarPathNode }
+            .associate { it.first.value to it.second }
     }
 
     fun parseVariables(path: Array<String>): Map<String, String> {

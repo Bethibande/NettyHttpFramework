@@ -11,7 +11,7 @@ class PreparedRequest<R>(
     val client: HttpClient
 ) {
 
-    internal val variables: Map<String, Int>
+    val variables: Map<String, Int>
     internal val pathTokens = path.split(Route.PATH_SEPARATOR).toTypedArray()
 
     init {
