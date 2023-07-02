@@ -9,6 +9,8 @@ abstract class HttpResponseContext(
     channel: Channel
 ): HttpContextBase(connection, channel) {
 
+    fun getRequestHeader() = super.header
+
     fun newHeader(status: HttpResponseStatus, contentLength: Long): AbstractHttpHeader {
         val header = super.newHeader()
         header.setStatus(status)

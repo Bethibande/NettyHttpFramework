@@ -58,7 +58,7 @@ abstract class HttpContextBase(
 
     protected abstract fun convertNettyHeaders(headers: Headers<*, *, *>): AbstractHttpHeader
 
-    fun onHeader(consumer: Consumer<AbstractHttpHeader>) {
+    internal fun onHeader(consumer: Consumer<AbstractHttpHeader>) {
         this.headerListener.addListener(consumer)
     }
 

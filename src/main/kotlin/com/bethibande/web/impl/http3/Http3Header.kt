@@ -44,7 +44,7 @@ class Http3Header(
     }
 
     override fun setStatus(status: HttpResponseStatus) {
-        this.headers.status(status.reasonPhrase())
+        this.headers.status(status.code().toString())
     }
 
     override fun setAuthority(authority: String) {

@@ -26,7 +26,7 @@ fun serverHandle(ctx: HttpResponseContext) {
 }
 
 fun clientHandle(ctx: HttpRequestContext<String>) {
-    ctx.onHeader { _ ->
+    ctx.onStatus(HttpResponseStatus.OK) { _ ->
         ctx.readAllString({ str ->
             ctx.setResult(str)
             ctx.close()
@@ -59,14 +59,6 @@ fun main() {
     val preparedRequest = client.prepareRequest(HttpMethod.GET, "/test/:name", ::clientHandle)
     preparedRequest.request()
         .variable("name", "Max")
-        .execute()
-        .addListener { println("Response: ${it.get() as String}") }
-
-    // connection timeout is 5000, the old implementation would have thrown an exception when sending the request after this 5 sek wait
-    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(5005))
-
-    preparedRequest.request()
-        .variable("name", "Joshua")
         .execute()
         .addListener { println("Response: ${it.get() as String}") }
 }
