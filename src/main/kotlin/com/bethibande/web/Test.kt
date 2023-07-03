@@ -19,10 +19,7 @@ import kotlin.io.path.Path
 import kotlin.io.path.readText
 
 fun serverHandle(ctx: HttpResponseContext) {
-    val response = "Hello ${ctx.variables()[":name"]}".toByteArray()
-    ctx.writeHeader(ctx.newHeader(HttpResponseStatus.OK, response.size.toLong()))
-    ctx.write(response)
-    ctx.close()
+    ctx.response("Hello ${ctx.variables()[":name"]}")
 }
 
 fun clientHandle(ctx: HttpRequestContext<String>) {

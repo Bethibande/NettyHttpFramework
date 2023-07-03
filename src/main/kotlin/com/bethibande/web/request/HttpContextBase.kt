@@ -10,6 +10,7 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelProgressivePromise
 import io.netty.handler.codec.Headers
+import io.netty.handler.codec.http.HttpResponseStatus
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -189,6 +190,36 @@ abstract class HttpContextBase(
 
         return promise
     }
+
+    private fun writeResponse(status: HttpResponseStatus, data: Any?): ChannelFuture {
+        val header = this.newHeader()
+        header.setStatus(status)
+        if(data is ByteArray) header.setContentLength(data.size.toLong())
+        if(data is ByteBuffer) header.setContentLength(data.capacity().toLong())
+        if(data is ByteBuf) header.setContentLength(data.capacity().toLong())
+
+        this.writeHeader(header)
+        data?.let {
+            if(it is ByteArray) this.write(it)
+            if(it is ByteBuffer) this.write(it)
+            if(it is ByteBuf) this.write(it)
+        }
+
+        this.flush()
+        this.close()
+        return this.lastWrite!!
+    }
+
+    fun response(buf: ByteBuf): ChannelFuture = this.writeResponse(HttpResponseStatus.OK, buf)
+
+    fun response(buffer: ByteBuffer): ChannelFuture = this.writeResponse(HttpResponseStatus.OK, buffer)
+
+    fun response(string: String): ChannelFuture {
+        val bytes = string.toByteArray()
+        return this.writeResponse(HttpResponseStatus.OK, bytes)
+    }
+
+    fun response(status: HttpResponseStatus): ChannelFuture = this.writeResponse(status, null)
 
     fun flush() = this.access { channel ->
         channel.flush()
