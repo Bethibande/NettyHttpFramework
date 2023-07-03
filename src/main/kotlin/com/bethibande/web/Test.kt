@@ -13,8 +13,8 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import io.netty.incubator.codec.http3.Http3
 import io.netty.incubator.codec.quic.QuicSslContextBuilder
 import java.net.InetSocketAddress
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.LockSupport
+import java.text.NumberFormat
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.Path
 import kotlin.io.path.readText
 
@@ -22,17 +22,19 @@ fun serverHandle(ctx: HttpResponseContext) {
     ctx.response("Hello ${ctx.variables()[":name"]}")
 }
 
-fun clientHandle(ctx: HttpRequestContext<String>) {
+fun clientHandle(ctx: HttpRequestContext) {
     ctx.onStatus(HttpResponseStatus.OK) { _ ->
-        ctx.readAllString({ str ->
-            ctx.setResult(str)
-            ctx.close()
-        })
+        ctx.responseAsString()
     }
 }
 
+fun Long.formatted(): String = NumberFormat.getInstance().format(this)
+fun Double.formatted(): String = NumberFormat.getInstance().format(this)
+
 fun main() {
-    val executor = ThreadPoolExecutor(executionType = ExecutionType.NIO, threadMaxCount = 12)
+    val threads = 12
+    val executor1 = ThreadPoolExecutor(executionType = ExecutionType.NIO, threadMaxCount = threads)
+    val executor2 = ThreadPoolExecutor(executionType = ExecutionType.NIO, threadMaxCount = threads)
 
     val key = CertificateHelper.getPrivateKeyFromString(Path("./cert/key_pkcs8.pem").readText())
     val cert = CertificateHelper.getCertificateFromString(Path("./cert/cert.pem"))
@@ -47,15 +49,31 @@ fun main() {
 
     val address = InetSocketAddress("127.0.0.1", 2345)
 
-    val server = Http3Server(executor, serverSslContext)
+    val server = Http3Server(executor1, threads, serverSslContext)
     server.bindInterface(address)
     server.addRoute("/test/:name", HttpMethod.GET, ::serverHandle)
 
-    val client = Http3Client(address, clientSslContext, executor)
+    val client = Http3Client(address, clientSslContext, executor2, threads)
 
     val preparedRequest = client.prepareRequest(HttpMethod.GET, "/test/:name", ::clientHandle)
-    preparedRequest.request()
-        .variable("name", "Max")
-        .execute()
-        .addListener { println("Response: ${it.get() as String}") }
+
+    val counter = AtomicInteger(0)
+    val times = 100_000
+    val start = System.nanoTime()
+    for(i in 1..times) {
+        preparedRequest.request()
+            .variable("name", "Max")
+            .execute()
+            .addListener {
+                val count = counter.incrementAndGet()
+                if (count % 1000 == 0) println(count)
+
+                if(count == times) {
+                    val end = System.nanoTime()
+                    val time = end - start
+                    val avg = time / times
+                    println("took ${time.formatted()} ns | avg ${avg.formatted()} ns | op/s ${(1_000_000_000.toDouble()/avg).formatted()}")
+                }
+            }
+    }
 }

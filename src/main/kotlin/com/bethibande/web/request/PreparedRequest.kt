@@ -4,10 +4,10 @@ import com.bethibande.web.HttpClient
 import com.bethibande.web.routes.Route
 import io.netty.handler.codec.http.HttpMethod
 
-class PreparedRequest<R>(
+class PreparedRequest(
     val method: HttpMethod,
     val path: String,
-    val handler: RequestHook<R>,
+    val handler: RequestHook,
     val client: HttpClient
 ) {
 
@@ -25,8 +25,8 @@ class PreparedRequest<R>(
             .associate { it to tokens.indexOf(it) }
     }
 
-    fun request(): Request<R> {
-        return Request<R>(this)
+    fun request(): Request {
+        return Request(this)
     }
 
 }

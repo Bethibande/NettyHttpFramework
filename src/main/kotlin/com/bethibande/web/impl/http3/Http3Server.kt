@@ -2,7 +2,6 @@ package com.bethibande.web.impl.http3
 
 import com.bethibande.web.HttpServer
 import com.bethibande.web.config.HttpServerConfig
-import com.bethibande.web.execution.ThreadPoolExecutor
 import com.bethibande.web.impl.http3.handler.ServerConnectionHandler
 import com.bethibande.web.request.HttpResponseContext
 import com.bethibande.web.request.RequestHandler
@@ -13,29 +12,33 @@ import io.netty.bootstrap.Bootstrap
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandler
+import io.netty.channel.DefaultEventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.incubator.codec.http3.Http3
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler
 import io.netty.incubator.codec.quic.QuicSslContext
+import io.netty.util.concurrent.DefaultEventExecutorGroup
 import java.net.InetSocketAddress
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
 class Http3Server(
-    private val executor: ThreadPoolExecutor,
-    private val sslContext: QuicSslContext
+    private val executor: Executor,
+    private val maxThreads: Int,
+    private val sslContext: QuicSslContext,
 ): HttpServer, RequestHandler() {
 
     companion object {
         const val INITIAL_MAX_DATA: Long = 4096
         const val INITIAL_MAX_DATA_BID_LOCAL: Long = 4096
         const val INITIAL_MAX_DATA_BID_REMOTE: Long = 4096
-        const val INITIAL_MAX_STREAMS_BID: Long = 4096
+        const val INITIAL_MAX_STREAMS_BID: Long = 1_000_000
     }
 
-    private val group = NioEventLoopGroup(this.executor.threadMinCount(), this.executor)
+    private val group = NioEventLoopGroup(this.maxThreads, this.executor)
     private var codec: ChannelHandler
 
     private val interfaces = mutableListOf<Channel>()

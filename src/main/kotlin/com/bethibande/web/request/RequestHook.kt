@@ -1,7 +1,7 @@
 package com.bethibande.web.request
 
-fun interface RequestHook<R> {
+fun interface RequestHook {
 
-    fun handle(context: HttpRequestContext<R>)
+    fun handle(context: HttpRequestContext)
 
 }

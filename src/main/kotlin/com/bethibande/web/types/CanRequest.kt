@@ -5,7 +5,7 @@ import io.netty.util.concurrent.Promise
 
 interface CanRequest {
 
-    fun <R> request(consumer: RequestHook<R>): Promise<R>
+    fun request(consumer: RequestHook): Promise<*>
     fun canRequest(): Boolean
 
 }

@@ -97,6 +97,7 @@ class HttpServiceBuilder(
         return when (version) {
             HttpVersion.HTTP_3 -> Http3Server(
                 executor,
+                this.threadsMax,
                 this.sslContext as QuicSslContext
             )
             HttpVersion.HTTP_2 -> TODO("Not yet implemented")
@@ -122,7 +123,8 @@ class HttpServiceBuilder(
             HttpVersion.HTTP_3 -> Http3Client(
                 address,
                 this.sslContext as QuicSslContext,
-                executor
+                executor,
+                this.threadsMax
             )
             HttpVersion.HTTP_2 -> TODO("Not yet implemented")
             HttpVersion.HTTP_1 -> TODO("Not yet implemented")

@@ -20,7 +20,7 @@ class Http3ResponseContext(
     override fun frameData(buf: ByteBuf): Any = DefaultHttp3DataFrame(buf)
 
     override fun closeContext() {
-        this.channel.shutdownOutput()
+        this.channel.shutdownOutput().addListener { this.channel.close() }
     }
 
     override fun newHeaderInstance(): Http3Header = Http3Header(DefaultHttp3Headers())

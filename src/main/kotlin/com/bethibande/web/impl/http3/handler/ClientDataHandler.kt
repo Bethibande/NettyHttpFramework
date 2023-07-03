@@ -6,11 +6,11 @@ import io.netty.incubator.codec.http3.Http3DataFrame
 import io.netty.incubator.codec.http3.Http3HeadersFrame
 import io.netty.incubator.codec.http3.Http3RequestStreamInboundHandler
 
-class ClientDataHandler<R>: Http3RequestStreamInboundHandler() {
+class ClientDataHandler: Http3RequestStreamInboundHandler() {
 
-    private lateinit var context: HttpRequestContext<R>
+    private lateinit var context: HttpRequestContext
 
-    fun setContext(context: HttpRequestContext<R>) {
+    fun setContext(context: HttpRequestContext) {
         this.context = context
     }
 

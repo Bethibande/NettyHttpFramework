@@ -2,17 +2,30 @@ package com.bethibande.web.request
 
 import com.bethibande.web.HttpConnection
 import io.netty.channel.Channel
+import io.netty.channel.ChannelFuture
+import io.netty.channel.ChannelProgressivePromise
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpScheme
 import io.netty.util.concurrent.Promise
+import java.nio.charset.StandardCharsets
 import java.util.function.Consumer
 
-abstract class HttpRequestContext<R>(
+abstract class HttpRequestContext(
     connection: HttpConnection,
     channel: Channel,
-    private val promise: Promise<R>
+    private val promise: Promise<Any>
 ): HttpContextBase(connection, channel) {
+
+    fun responseAsString(): ChannelProgressivePromise = super.readAllString({
+        this.setResult(it)
+        super.close()
+    }, StandardCharsets.UTF_8)
+
+    fun responseAsBytes(): ChannelProgressivePromise = super.readAllBytes {
+        this.setResult(it)
+        super.close()
+    }
 
     fun onResponse(consumer: Consumer<AbstractHttpHeader>) {
         super.onHeader(consumer)
@@ -24,7 +37,7 @@ abstract class HttpRequestContext<R>(
         }
     }
 
-    fun setResult(result: R) {
+    fun setResult(result: Any) {
         val state = promise.trySuccess(result)
         if(!state) throw IllegalStateException("A result has already been provided")
     }

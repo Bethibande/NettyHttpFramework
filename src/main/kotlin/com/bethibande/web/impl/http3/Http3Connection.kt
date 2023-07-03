@@ -49,12 +49,12 @@ class Http3Connection(
 
     override fun canRequest(): Boolean = this.channel.peerAllowedStreams(this.requestStreamType) > 0
 
-    override fun <R> request(handler: RequestHook<R>): Promise<R> {
+    override fun request(handler: RequestHook): Promise<Any> {
         if(pushStreamManager != null) {
             val pushId = pushStreamManager.reserveNextPushId()
             val futureStream: Future<QuicStreamChannel> = pushStreamManager.newPushStream(pushId, null) // TODO: channel handler to handle cancel frame from client
 
-            val promise = DefaultPromise<R>(this.channel.eventLoop())
+            val promise = DefaultPromise<Any>(this.channel.eventLoop())
 
             futureStream.addListener {
                 val stream = futureStream.get()
