@@ -1,12 +1,13 @@
 package com.bethibande.web.impl.http3.context
 
 import com.bethibande.web.impl.http3.Http3Connection
-import com.bethibande.web.impl.http3.Http3Header
+import com.bethibande.web.request.AbstractHttpHeader
 import com.bethibande.web.request.HttpRequestContext
 import io.netty.buffer.ByteBuf
 import io.netty.handler.codec.Headers
 import io.netty.incubator.codec.http3.DefaultHttp3DataFrame
 import io.netty.incubator.codec.http3.DefaultHttp3Headers
+import io.netty.incubator.codec.http3.DefaultHttp3HeadersFrame
 import io.netty.incubator.codec.http3.Http3Headers
 import io.netty.incubator.codec.quic.QuicStreamChannel
 import io.netty.util.concurrent.Promise
@@ -17,7 +18,9 @@ class Http3RequestContext(
     promise: Promise<Any>
 ): HttpRequestContext(connection, channel, promise) {
 
-    override fun convertNettyHeaders(headers: Headers<*, *, *>): Http3Header = Http3Header(headers as Http3Headers)
+    override fun convertNettyHeaders(headers: Headers<*, *, *>) = AbstractHttpHeader(headers as Http3Headers) {
+        DefaultHttp3HeadersFrame(it as Http3Headers)
+    }
 
     override fun frameData(buf: ByteBuf): Any = DefaultHttp3DataFrame(buf)
 
@@ -25,5 +28,7 @@ class Http3RequestContext(
         this.channel.shutdownOutput().addListener { this.channel.close() }
     }
 
-    override fun newHeaderInstance(): Http3Header = Http3Header(DefaultHttp3Headers())
+    override fun newHeaderInstance() = AbstractHttpHeader(DefaultHttp3Headers()) {
+        DefaultHttp3HeadersFrame(it as Http3Headers)
+    }
 }
