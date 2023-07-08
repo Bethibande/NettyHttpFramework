@@ -20,6 +20,8 @@
         <netty.version>4.1.93.Final</netty.version>
         <netty.build.version>31</netty.build.version>
         <netty.quic.version>0.0.48.Final</netty.quic.version>
+        <netty.http3>0.0.18.Final</netty.http3>
+        <netty.http2>4.1.94.Final</netty.http2>
         <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
     </properties>
 
@@ -27,8 +29,16 @@
         <dependency>
             <groupId>io.netty.incubator</groupId>
             <artifactId>netty-incubator-codec-http3</artifactId>
-            <version>0.0.18.Final</version>
+            <version>${netty.http3}</version>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/io.netty/netty-codec-http2 -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-http2</artifactId>
+            <version>${netty.http2}</version>
+        </dependency>
+
 
         <dependency>
             <groupId>io.netty</groupId>

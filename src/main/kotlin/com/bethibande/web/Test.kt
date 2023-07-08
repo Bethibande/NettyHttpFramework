@@ -3,12 +3,16 @@ package com.bethibande.web
 import com.bethibande.web.crypto.CertificateHelper
 import com.bethibande.web.execution.ExecutionType
 import com.bethibande.web.execution.ThreadPoolExecutor
+import com.bethibande.web.impl.http2.Http2Client
+import com.bethibande.web.impl.http2.Http2Server
 import com.bethibande.web.impl.http3.Http3Client
 import com.bethibande.web.impl.http3.Http3Server
 import com.bethibande.web.request.HttpRequestContext
 import com.bethibande.web.request.HttpResponseContext
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.handler.codec.http2.Http2SecurityUtil
+import io.netty.handler.ssl.*
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import io.netty.incubator.codec.http3.Http3
 import io.netty.incubator.codec.quic.QuicSslContextBuilder
@@ -38,7 +42,40 @@ fun main() {
 
     val key = CertificateHelper.getPrivateKeyFromString(Path("./cert/key_pkcs8.pem").readText())
     val cert = CertificateHelper.getCertificateFromString(Path("./cert/cert.pem"))
-    val serverSslContext = QuicSslContextBuilder.forServer(key, "password", cert)
+
+    val serverSslContext = SslContextBuilder.forServer(key, cert)
+        .sslProvider(SslProvider.JDK)
+        .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+        .applicationProtocolConfig(ApplicationProtocolConfig(
+            ApplicationProtocolConfig.Protocol.ALPN,
+            ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+            ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+            ApplicationProtocolNames.HTTP_2
+        )).build()
+    val clientSslContext = SslContextBuilder.forClient()
+        .sslProvider(SslProvider.JDK)
+        .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+        .trustManager(cert)
+        .applicationProtocolConfig(ApplicationProtocolConfig(
+            ApplicationProtocolConfig.Protocol.ALPN,
+            ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+            ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+            ApplicationProtocolNames.HTTP_2
+        )).build()
+
+    val address = InetSocketAddress("127.0.0.1", 4543)
+
+    val server = Http2Server(executor1, threads, serverSslContext)
+    server.bindInterface(address)
+    server.addRoute("/test/:name", HttpMethod.GET, ::serverHandle)
+
+    val client = Http2Client(address, clientSslContext, executor2, threads)
+    client.prepareRequest(HttpMethod.GET, "/test/:name", ::clientHandle)
+        .request()
+        .variable("name", "Max")
+        .execute()
+        .addListener { println("Result: ${it.get()}") }
+    /*val serverSslContext = QuicSslContextBuilder.forServer(key, "password", cert)
         .applicationProtocols(*Http3.supportedApplicationProtocols())
         .build()
     val clientSslContext = QuicSslContextBuilder.forClient()
@@ -75,5 +112,5 @@ fun main() {
                     println("took ${time.formatted()} ns | avg ${avg.formatted()} ns | op/s ${(1_000_000_000.toDouble()/avg).formatted()}")
                 }
             }
-    }
+    }*/
 }
