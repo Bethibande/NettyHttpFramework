@@ -7,18 +7,17 @@ import io.netty.handler.codec.http2.Http2DataFrame
 import io.netty.handler.codec.http2.Http2HeadersFrame
 
 class ServerDataHandler(
-    private val context: Http2ResponseContext?
+    private val context: Http2ResponseContext
 ): ChannelDuplexHandler() {
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-        println(msg.javaClass)
         if (msg is Http2HeadersFrame) {
-
+            this.context.headerCallback(msg.headers())
             return
         }
 
         if (msg is Http2DataFrame) {
-
+            this.context.dataCallback(msg.content())
             return
         }
 

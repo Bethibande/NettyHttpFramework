@@ -14,6 +14,8 @@ import io.netty.channel.ChannelOption
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.http.HttpMethod
+import io.netty.handler.codec.http2.Http2FrameCodecBuilder
+import io.netty.handler.codec.http2.Http2Settings
 import io.netty.handler.codec.http2.Http2StreamChannel
 import io.netty.handler.codec.http2.Http2StreamChannelBootstrap
 import io.netty.handler.ssl.SslContext

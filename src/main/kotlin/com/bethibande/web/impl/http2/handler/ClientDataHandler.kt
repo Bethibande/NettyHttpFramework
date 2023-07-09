@@ -11,6 +11,7 @@ class ClientDataHandler(
 ): ChannelDuplexHandler() {
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
+        println("received ${msg.javaClass}")
         if(msg is Http2HeadersFrame) {
             this.context.headerCallback(msg.headers())
         }

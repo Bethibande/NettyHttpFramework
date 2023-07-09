@@ -14,21 +14,21 @@ import io.netty.handler.codec.http2.Http2Headers
 import io.netty.handler.codec.http2.Http2StreamChannel
 
 class Http2ResponseContext(
-    connection: Http2Connection,
-    channel: Http2StreamChannel,
+    override val connection: Http2Connection,
+    override val channel: Http2StreamChannel,
 ): HttpResponseContext(connection, channel) {
 
     override fun convertNettyHeaders(headers: Headers<*, *, *>) = AbstractHttpHeader(headers as Http2Headers) {
-        DefaultHttp2HeadersFrame(it as Http2Headers)
+        DefaultHttp2HeadersFrame(it as Http2Headers).stream(this.channel.stream())
     }
 
-    override fun frameData(buf: ByteBuf): Any = DefaultHttp2DataFrame(buf)
+    override fun frameData(buf: ByteBuf): Any = DefaultHttp2DataFrame(buf).stream(this.channel.stream())
 
     override fun closeContext() {
         super.channel.write(DefaultHttp2GoAwayFrame(Http2Error.NO_ERROR)).addListener { this.channel.close() }
     }
 
     override fun newHeaderInstance() = AbstractHttpHeader(DefaultHttp2Headers()) {
-        DefaultHttp2HeadersFrame(it as Http2Headers)
+        DefaultHttp2HeadersFrame(it as Http2Headers).stream(this.channel.stream())
     }
 }

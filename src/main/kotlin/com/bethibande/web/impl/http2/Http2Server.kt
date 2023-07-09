@@ -4,6 +4,7 @@ import com.bethibande.web.HttpServer
 import com.bethibande.web.config.HttpServerConfig
 import com.bethibande.web.impl.http2.handler.ServerHandlerInitializer
 import com.bethibande.web.request.HttpResponseContext
+import com.bethibande.web.request.RequestHandler
 import com.bethibande.web.routes.Route
 import com.bethibande.web.routes.RouteRegistry
 import com.bethibande.web.types.Registration
@@ -23,12 +24,19 @@ class Http2Server(
     private val executor: Executor,
     private val maxThreads: Int,
     private val sslContext: SslContext,
-): HttpServer {
+): HttpServer, RequestHandler() {
 
     private val eventGroup = NioEventLoopGroup(this.maxThreads, this.executor)
     private val interfaces = mutableListOf<Http2Interface>()
 
     private val routes = RouteRegistry()
+
+    private val connections = mutableListOf<Http2Connection>()
+
+    internal fun handleConnection(connection: Http2Connection) {
+        this.connections.add(connection)
+        connection.channel().closeFuture().addListener { this.connections.remove(connection) }
+    }
 
     override fun bindInterface(address: InetSocketAddress): Registration<ChannelFuture> {
         val bootstrap = ServerBootstrap()
@@ -58,6 +66,8 @@ class Http2Server(
     override fun addRoute(path: String, method: HttpMethod?, handler: Consumer<HttpResponseContext>) {
         this.routes.register(Route(path, method, handler))
     }
+
+    override fun getRoutes(): RouteRegistry = this.routes
 
     override fun configure(consumer: Consumer<HttpServerConfig>) {
         TODO("Not yet implemented")

@@ -136,8 +136,6 @@ abstract class HttpContextBase(
     protected fun writeAndFlush(obj: Any): ChannelFuture = this.access { channel ->
         if(this.has(STATE_READ_ONLY)) throw IllegalStateException("The context is read-only.")
 
-        println("Write and flush $obj")
-
         val future = channel.writeAndFlush(obj)
         this.lastWrite = future
 
