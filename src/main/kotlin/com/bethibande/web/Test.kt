@@ -23,11 +23,14 @@ import kotlin.io.path.Path
 import kotlin.io.path.readText
 
 fun serverHandle(ctx: HttpResponseContext) {
+    println("server")
     ctx.response("Hello ${ctx.variables()[":name"]}")
 }
 
 fun clientHandle(ctx: HttpRequestContext) {
+    println("client")
     ctx.onStatus(HttpResponseStatus.OK) { _ ->
+        println("client rec")
         ctx.responseAsString()
     }
 }

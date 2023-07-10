@@ -89,14 +89,8 @@ class Http2Client(
         val promise = DefaultPromise<Any>(connection.channel().eventLoop())
 
         Http2StreamChannelBootstrap(connection.channel())
+            .handler(ClientStreamInitializer(promise, connection, consumer))
             .open()
-            .addListener {
-                val channel = it.get() as Http2StreamChannel
-                val context = Http2RequestContext(connection, channel, promise)
-
-                channel.pipeline().addLast(ClientDataHandler(context))
-                consumer.handle(context)
-            }
 
         return@useConnection promise
     }
