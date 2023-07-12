@@ -16,7 +16,7 @@ class ClientStreamInitializer(
     override fun initChannel(ch: Http2StreamChannel) {
         val context = Http2RequestContext(this.connection, ch, this.promise)
 
-        println("init")
+        println("init ${ch.stream().id()}")
 
         ch.pipeline().addLast(ClientDataHandler(context))
         this.hook.handle(context)

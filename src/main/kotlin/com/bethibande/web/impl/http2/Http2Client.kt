@@ -8,6 +8,7 @@ import com.bethibande.web.impl.http2.handler.ClientHandlerInitializer
 import com.bethibande.web.impl.http2.handler.ClientStreamInitializer
 import com.bethibande.web.request.PreparedRequest
 import com.bethibande.web.request.RequestHook
+import com.bethibande.web.routes.RouteRegistry
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelOption
@@ -31,7 +32,7 @@ class Http2Client(
     private val sslContext: SslContext,
     private val executor: Executor,
     private val executorThreads: Int,
-) : HttpClient {
+) : HttpClient() {
 
     private val eventGroup = NioEventLoopGroup(this.executorThreads, this.executor)
     private val connections = mutableListOf<Http2Connection>()
@@ -78,18 +79,14 @@ class Http2Client(
         TODO("Not yet implemented")
     }
 
-    override fun getConnections(): Collection<Http2Connection> = this.connections
+    override fun getConnections(): List<Http2Connection> = this.connections
 
-    private fun <R> useConnection(fn: (Http2Connection) -> R): R {
-        if (this.connections.isEmpty()) this.newConnection().sync()
-        return fn.invoke(this.connections.first())
-    }
 
     override fun request(consumer: RequestHook): Promise<*> = useConnection { connection ->
         val promise = DefaultPromise<Any>(connection.channel().eventLoop())
 
         Http2StreamChannelBootstrap(connection.channel())
-            .handler(ClientStreamInitializer(promise, connection, consumer))
+            .handler(ClientStreamInitializer(promise, connection as Http2Connection, consumer))
             .open()
 
         return@useConnection promise
@@ -97,6 +94,10 @@ class Http2Client(
 
     fun prepareRequest(method: HttpMethod, path: String, handler: RequestHook): PreparedRequest {
         return PreparedRequest(method, path, handler, this)
+    }
+
+    override fun getRoutes(): RouteRegistry {
+        TODO("Not yet implemented")
     }
 
     override fun canRequest(): Boolean = true // TODO: implement

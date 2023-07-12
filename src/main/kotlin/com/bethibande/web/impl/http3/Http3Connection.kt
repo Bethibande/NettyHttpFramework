@@ -32,7 +32,7 @@ class Http3Connection(
 
     private val streams = mutableListOf<HttpContextBase>()
 
-    internal fun channel(): QuicChannel = this.channel
+    override fun channel(): QuicChannel = this.channel
 
     internal fun updateAddress(address: InetSocketAddress) {
         this.address = address

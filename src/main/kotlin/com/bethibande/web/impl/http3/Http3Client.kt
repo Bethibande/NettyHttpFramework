@@ -33,7 +33,7 @@ class Http3Client(
     private val sslContext: QuicSslContext,
     private val executor: Executor,
     private val maxThreads: Int,
-) : HttpClient, RequestHandler() {
+) : HttpClient() {
 
     private val config = HttpClientConfig()
 
@@ -116,14 +116,6 @@ class Http3Client(
         return promise
     }
 
-    fun useConnection(fn: (Http3Connection) -> Unit) {
-        this.connections.ifEmpty {
-            println("wait")
-            this.newConnection().sync()
-        }
-        this.connections.firstOrNull()?.let { fn.invoke(it) }
-    }
-
 
     override fun getRoutes(): RouteRegistry = this.routes
 
@@ -145,10 +137,15 @@ class Http3Client(
 
         this.useConnection { connection ->
             Http3.newRequestStream(
-                connection.channel(),
+                connection.channel() as QuicChannel,
                 streamHandler
             ).addListener { future ->
-                val context = Http3RequestContext(connection, future.get() as QuicStreamChannel, promise)
+                val context = Http3RequestContext(
+                    connection as Http3Connection,
+                    future.get() as QuicStreamChannel,
+                    promise
+                )
+
                 streamHandler.setContext(context)
                 handler.handle(context)
             }
@@ -165,5 +162,5 @@ class Http3Client(
         routes.register(Route(path, method, handler))
     }
 
-    override fun getConnections(): Collection<Http3Connection> = this.connections
+    override fun getConnections(): List<Http3Connection> = this.connections
 }

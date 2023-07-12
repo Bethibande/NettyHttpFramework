@@ -23,14 +23,11 @@ import kotlin.io.path.Path
 import kotlin.io.path.readText
 
 fun serverHandle(ctx: HttpResponseContext) {
-    println("server")
     ctx.response("Hello ${ctx.variables()[":name"]}")
 }
 
 fun clientHandle(ctx: HttpRequestContext) {
-    println("client")
     ctx.onStatus(HttpResponseStatus.OK) { _ ->
-        println("client rec")
         ctx.responseAsString()
     }
 }
@@ -78,6 +75,7 @@ fun main() {
         .variable("name", "Max")
         .execute()
         .addListener { println("Result: ${it.get()}") }
+
     /*val serverSslContext = QuicSslContextBuilder.forServer(key, "password", cert)
         .applicationProtocols(*Http3.supportedApplicationProtocols())
         .build()
@@ -94,11 +92,14 @@ fun main() {
     server.addRoute("/test/:name", HttpMethod.GET, ::serverHandle)
 
     val client = Http3Client(address, clientSslContext, executor2, threads)
+    client.setMinConnections(10)
+
+    (1..10).forEach { _ -> client.newConnection().sync() }*/
 
     val preparedRequest = client.prepareRequest(HttpMethod.GET, "/test/:name", ::clientHandle)
 
     val counter = AtomicInteger(0)
-    val times = 100_000
+    val times = 10_000
     val start = System.nanoTime()
     for(i in 1..times) {
         preparedRequest.request()
@@ -115,5 +116,5 @@ fun main() {
                     println("took ${time.formatted()} ns | avg ${avg.formatted()} ns | op/s ${(1_000_000_000.toDouble()/avg).formatted()}")
                 }
             }
-    }*/
+    }
 }

@@ -18,7 +18,6 @@ class ServerStreamInitializer(
         )
 
         ch.pipeline().addLast(ServerDataHandler(context))
-
         this.server.handleRequest(context)
     }
 }

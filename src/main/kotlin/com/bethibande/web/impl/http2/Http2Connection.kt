@@ -10,7 +10,7 @@ class Http2Connection(
     private val channel: Channel
 ): HttpConnection, HasState() {
 
-    internal fun channel(): Channel = this.channel
+    override fun channel(): Channel = this.channel
 
     override fun getAddress(): InetSocketAddress = this.channel.remoteAddress() as InetSocketAddress
 

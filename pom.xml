@@ -17,10 +17,10 @@
         <kotlin.code.style>official</kotlin.code.style>
         <kotlin.compiler.jvmTarget>${java.version}</kotlin.compiler.jvmTarget>
 
-        <netty.version>4.1.93.Final</netty.version>
         <netty.build.version>31</netty.build.version>
-        <netty.quic.version>0.0.48.Final</netty.quic.version>
+        <netty.version>4.1.94.Final</netty.version>
         <netty.http3>0.0.18.Final</netty.http3>
+        <netty.quic.version>0.0.48.Final</netty.quic.version>
         <netty.http2>4.1.94.Final</netty.http2>
         <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
     </properties>

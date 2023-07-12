@@ -61,8 +61,6 @@ abstract class HttpContextBase(
         this.dataQueue.offer(data)
     }
 
-    protected abstract fun convertNettyHeaders(headers: Headers<*, *, *>): AbstractHttpHeader
-
     internal fun onHeader(consumer: Consumer<AbstractHttpHeader>) {
         this.headerListener.addListener(consumer)
     }
@@ -216,6 +214,8 @@ abstract class HttpContextBase(
             set(STATE_CLOSED)
         }
     }
+
+    protected abstract fun convertNettyHeaders(headers: Headers<*, *, *>): AbstractHttpHeader
 
     protected abstract fun newHeaderInstance(): AbstractHttpHeader
 

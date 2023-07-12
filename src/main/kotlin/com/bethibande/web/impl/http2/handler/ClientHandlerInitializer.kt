@@ -1,8 +1,6 @@
 package com.bethibande.web.impl.http2.handler
 
-import io.netty.channel.Channel
-import io.netty.channel.ChannelDuplexHandler
-import io.netty.channel.ChannelInitializer
+import io.netty.channel.*
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder
 import io.netty.handler.codec.http2.Http2MultiplexCodec
 import io.netty.handler.codec.http2.Http2MultiplexHandler
@@ -20,13 +18,11 @@ class ClientHandlerInitializer(
             .initialSettings(Http2Settings.defaultSettings())
             .build()
 
-        val multiplexHandler = Http2MultiplexHandler(EmptyHandler())
+        val multiplexHandler = Http2MultiplexHandler(object: SimpleChannelInboundHandler<Any>() {
+            override fun channelRead0(ctx: ChannelHandlerContext, msg: Any) { }
+        })
 
-        ch.pipeline().addLast(frameCodec, multiplexHandler)
+        ch.pipeline().addLast(frameCodec)
+        ch.pipeline().addLast(multiplexHandler)
     }
-
-    private class EmptyHandler: ChannelDuplexHandler() {
-
-    }
-
 }

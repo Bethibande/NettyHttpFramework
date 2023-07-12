@@ -22,13 +22,13 @@ class Http2ResponseContext(
         DefaultHttp2HeadersFrame(it as Http2Headers).stream(this.channel.stream())
     }
 
+    override fun newHeaderInstance() = AbstractHttpHeader(DefaultHttp2Headers()) {
+        DefaultHttp2HeadersFrame(it as Http2Headers).stream(this.channel.stream())
+    }
+
     override fun frameData(buf: ByteBuf): Any = DefaultHttp2DataFrame(buf).stream(this.channel.stream())
 
     override fun closeContext() {
-        super.channel.write(DefaultHttp2GoAwayFrame(Http2Error.NO_ERROR)).addListener { this.channel.close() }
-    }
-
-    override fun newHeaderInstance() = AbstractHttpHeader(DefaultHttp2Headers()) {
-        DefaultHttp2HeadersFrame(it as Http2Headers).stream(this.channel.stream())
+        super.channel.close()
     }
 }
