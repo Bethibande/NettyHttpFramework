@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.handler.codec.http2.DefaultHttp2DataFrame
 import java.nio.ByteBuffer
 
 abstract class HttpResponseContext(
@@ -12,18 +13,42 @@ abstract class HttpResponseContext(
     channel: Channel
 ): HttpContextBase(connection, channel) {
 
-    private fun writeResponse(status: HttpResponseStatus, data: Any?): ChannelFuture {
+    private fun writeResponse(status: HttpResponseStatus, data: ByteArray?): ChannelFuture {
+        if (data != null) {
+            val buf = this.channel.alloc().buffer(data.size)
+            buf.writeBytes(data)
+
+            return this.writeResponse(status, DefaultHttp2DataFrame(buf), data.size.toLong())
+        }
+        return this.writeResponse(status, null, null)
+    }
+
+    private fun writeResponse(status: HttpResponseStatus, data: ByteBuffer?): ChannelFuture {
+        if (data != null) {
+            data.flip()
+            val buf = this.channel.alloc().buffer(data.limit())
+            buf.writeBytes(data)
+
+            return this.writeResponse(status, DefaultHttp2DataFrame(buf), data.limit().toLong())
+        }
+        return this.writeResponse(status, null, null)
+    }
+
+    private fun writeResponse(status: HttpResponseStatus, data: ByteBuf?): ChannelFuture {
+        if (data != null) {
+            return this.writeResponse(status, DefaultHttp2DataFrame(data), data.writerIndex().toLong())
+        }
+        return this.writeResponse(status, null, null)
+    }
+
+    private fun writeResponse(status: HttpResponseStatus, data: Any?, size: Long?): ChannelFuture {
         val header = this.newHeader()
         header.setStatus(status)
-        if(data is ByteArray) header.setContentLength(data.size.toLong())
-        if(data is ByteBuffer) header.setContentLength(data.capacity().toLong())
-        if(data is ByteBuf) header.setContentLength(data.capacity().toLong())
+        size?.let { header.setContentLength(size) }
 
         this.writeHeader(header)
         data?.let {
-            if(it is ByteArray) this.write(it)
-            if(it is ByteBuffer) this.write(it)
-            if(it is ByteBuf) this.write(it)
+            this.write(data)
         }
 
         this.flush()
@@ -40,7 +65,7 @@ abstract class HttpResponseContext(
         return this.writeResponse(HttpResponseStatus.OK, bytes)
     }
 
-    fun response(status: HttpResponseStatus): ChannelFuture = this.writeResponse(status, null)
+    fun response(status: HttpResponseStatus): ChannelFuture = this.writeResponse(status, null, null)
 
     fun getRequestHeader() = super.header
 

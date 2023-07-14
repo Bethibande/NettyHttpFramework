@@ -5,16 +5,17 @@ import com.bethibande.web.types.FieldListener
 import com.bethibande.web.types.HasState
 import com.bethibande.web.types.ValueQueue
 import io.netty.buffer.ByteBuf
-import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelProgressivePromise
 import io.netty.handler.codec.Headers
-import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.util.concurrent.Promise
 import java.io.InputStream
+import java.lang.RuntimeException
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.Future
 import java.util.function.Consumer
 import java.util.function.Function
 
@@ -84,7 +85,7 @@ abstract class HttpContextBase(
         var read = 0
 
         if(length <= 0) throw IllegalStateException("The content-length must be greater than 0")
-        val buffer = Unpooled.buffer(length, length)
+        val buffer = this.channel.alloc().buffer(length)
         val promise = this.channel.newProgressivePromise()
 
         onData { data ->
@@ -99,6 +100,7 @@ abstract class HttpContextBase(
             if(read == length) {
                 promise.setSuccess()
                 consumer.accept(buffer)
+                buffer.release()
             }
         }
 
@@ -154,12 +156,16 @@ abstract class HttpContextBase(
     fun write(buf: ByteBuf): ChannelFuture = this.write(this.frameData(buf))
 
     fun write(bytes: ByteArray): ChannelFuture {
-        val buf = Unpooled.wrappedBuffer(bytes)
-        buf.writerIndex(bytes.size)
+        val buf = this.channel.alloc().buffer(bytes.size)
+        buf.writeBytes(bytes)
         return this.write(buf)
     }
 
-    fun write(buffer: ByteBuffer): ChannelFuture = this.write(Unpooled.wrappedBuffer(buffer))
+    fun write(buffer: ByteBuffer): ChannelFuture {
+        val buf = this.channel.alloc().buffer(buffer.limit())
+        buf.writeBytes(buffer)
+        return this.write(buf)
+    }
 
     fun write(str: String, charset: Charset = StandardCharsets.UTF_8): ChannelFuture {
         return this.write(str.toByteArray(charset))
@@ -175,7 +181,7 @@ abstract class HttpContextBase(
             var progress = 0L
             var read: Int
             do {
-                val buffer = Unpooled.buffer(bufferSize)
+                val buffer = this.channel.alloc().buffer(bufferSize)
                 read = buffer.writeBytes(stream, bufferSize)
                 progress += read
 
@@ -212,6 +218,12 @@ abstract class HttpContextBase(
         this.lastWrite!!.addListener {
             this.closeContext()
             set(STATE_CLOSED)
+        }
+    }
+
+    protected fun throwOnError(future: Future<*>) {
+        if (future is Promise<*> && !future.isSuccess) {
+            throw RuntimeException(future.cause())
         }
     }
 

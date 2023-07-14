@@ -5,20 +5,16 @@ import com.bethibande.web.execution.ExecutionType
 import com.bethibande.web.execution.ThreadPoolExecutor
 import com.bethibande.web.impl.http2.Http2Client
 import com.bethibande.web.impl.http2.Http2Server
-import com.bethibande.web.impl.http3.Http3Client
-import com.bethibande.web.impl.http3.Http3Server
 import com.bethibande.web.request.HttpRequestContext
 import com.bethibande.web.request.HttpResponseContext
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http2.Http2SecurityUtil
 import io.netty.handler.ssl.*
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory
-import io.netty.incubator.codec.http3.Http3
-import io.netty.incubator.codec.quic.QuicSslContextBuilder
 import java.net.InetSocketAddress
 import java.text.NumberFormat
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.LockSupport
 import kotlin.io.path.Path
 import kotlin.io.path.readText
 
@@ -70,36 +66,32 @@ fun main() {
     server.addRoute("/test/:name", HttpMethod.GET, ::serverHandle)
 
     val client = Http2Client(address, clientSslContext, executor2, threads)
-    client.prepareRequest(HttpMethod.GET, "/test/:name", ::clientHandle)
-        .request()
-        .variable("name", "Max")
-        .execute()
-        .addListener { println("Result: ${it.get()}") }
-
-    /*val serverSslContext = QuicSslContextBuilder.forServer(key, "password", cert)
-        .applicationProtocols(*Http3.supportedApplicationProtocols())
-        .build()
-    val clientSslContext = QuicSslContextBuilder.forClient()
-        .keyManager(key, "password", cert)
-        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-        .applicationProtocols(*Http3.supportedApplicationProtocols())
-        .build()
-
-    val address = InetSocketAddress("127.0.0.1", 2345)
-
-    val server = Http3Server(executor1, threads, serverSslContext)
-    server.bindInterface(address)
-    server.addRoute("/test/:name", HttpMethod.GET, ::serverHandle)
-
-    val client = Http3Client(address, clientSslContext, executor2, threads)
-    client.setMinConnections(10)
-
-    (1..10).forEach { _ -> client.newConnection().sync() }*/
 
     val preparedRequest = client.prepareRequest(HttpMethod.GET, "/test/:name", ::clientHandle)
 
+    val connections = threads
+    client.setMinConnections(connections)
+    (1..connections).forEach { _ -> client.newConnection().sync() }
+
     val counter = AtomicInteger(0)
-    val times = 10_000
+    val times = 2_000_000
+    val warmup = 250_000
+
+    val warmupCounter = AtomicInteger(warmup)
+
+    for(i in 1..warmup) {
+        preparedRequest.request()
+            .variable("name", "Max")
+            .execute()
+            .addListener {
+                warmupCounter.getAndDecrement()
+            }
+    }
+
+    while (warmupCounter.get() > 0) {
+        LockSupport.parkNanos(1000000)
+    }
+
     val start = System.nanoTime()
     for(i in 1..times) {
         preparedRequest.request()
@@ -107,7 +99,7 @@ fun main() {
             .execute()
             .addListener {
                 val count = counter.incrementAndGet()
-                if (count % 1000 == 0) println(count)
+                if (count % 10000 == 0) println(count)
 
                 if(count == times) {
                     val end = System.nanoTime()

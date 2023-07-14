@@ -23,7 +23,6 @@ class APNHandler(
             this.server.handleConnection(connection)
 
             p0.pipeline().addLast(
-                Http2FrameCodecBuilder.forServer().build(),
                 codec,
                 Http2MultiplexHandler(ServerStreamInitializer(this.server, connection)),
             )
