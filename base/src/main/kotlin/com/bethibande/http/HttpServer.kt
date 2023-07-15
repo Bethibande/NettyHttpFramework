@@ -10,10 +10,6 @@ import java.util.function.Consumer
 
 interface HttpServer {
 
-    companion object {
-        val PATH_REGEX = Regex("//?")
-    }
-
     /**
      * Binds a new network interface
      * @throws IllegalArgumentException if address is already bound

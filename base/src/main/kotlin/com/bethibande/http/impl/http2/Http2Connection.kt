@@ -14,6 +14,8 @@ class Http2Connection(
     channel: Channel
 ): HttpConnection(channel) {
 
+    private val streamInitializer = ClientStreamInitializer()
+
     override fun getRemoteAddress(): InetSocketAddress = this.channel.remoteAddress() as InetSocketAddress
 
     override fun close(): ChannelFuture {
@@ -25,7 +27,10 @@ class Http2Connection(
 
     override fun request(consumer: RequestHook, promise: Promise<Any>) {
         Http2StreamChannelBootstrap(this.channel)
-            .handler(ClientStreamInitializer(promise, this, consumer))
+            .attr(ClientStreamInitializer.ATTRIB_CONNECTION, this)
+            .attr(ClientStreamInitializer.ATTRIB_PROMISE, promise)
+            .attr(ClientStreamInitializer.ATTRIB_HOOK, consumer)
+            .handler(this.streamInitializer)
             .open()
     }
 

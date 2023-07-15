@@ -1,6 +1,6 @@
 package com.bethibande.http.request
 
-import com.bethibande.http.HttpServer
+import com.bethibande.http.routes.Route
 import com.bethibande.http.routes.RouteRegistry
 
 abstract class RequestHandler {
@@ -9,7 +9,7 @@ abstract class RequestHandler {
 
     internal fun handleRequest(context: HttpResponseContext) {
         context.onHeader { header ->
-            val path = header.getPath()!!.split(HttpServer.PATH_REGEX).toTypedArray()
+            val path = header.getPath().split(Route.PATH_SEPARATOR).toTypedArray()
             val routes = getRoutes().get(path).iterator()
 
             while (routes.hasNext()) {

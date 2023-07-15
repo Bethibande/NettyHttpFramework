@@ -1,21 +1,22 @@
 package com.bethibande.http.impl.http2.handler
 
-import com.bethibande.http.impl.http2.context.Http2RequestContext
 import io.netty.channel.ChannelDuplexHandler
+import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http2.Http2DataFrame
 import io.netty.handler.codec.http2.Http2HeadersFrame
 
-class ClientDataHandler(
-    private val context: Http2RequestContext,
-): ChannelDuplexHandler() {
+@Sharable
+class ClientDataHandler: ChannelDuplexHandler() {
 
-    override fun channelRead(ctx: ChannelHandlerContext?, msg: Any) {
+    override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
+        val context = ctx.channel().attr(ClientStreamInitializer.ATTRIB_CONTEXT).get()
+
         if(msg is Http2HeadersFrame) {
-            this.context.headerCallback(msg.headers())
+            context.headerCallback(msg.headers())
         }
         if(msg is Http2DataFrame) {
-            this.context.dataCallback(msg.content())
+            context.dataCallback(msg.content())
         }
     }
 }

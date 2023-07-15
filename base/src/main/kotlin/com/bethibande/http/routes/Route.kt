@@ -14,7 +14,7 @@ class Route(
 
     companion object {
 
-        val PATH_SEPARATOR = Regex("/+")
+        val PATH_SEPARATOR = Regex("//?")
         const val VAR_PREFIX = ":"
 
         fun pathToTokens(path: String): Array<PathNode> {
