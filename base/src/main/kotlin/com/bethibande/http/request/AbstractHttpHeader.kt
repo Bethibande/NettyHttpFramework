@@ -7,10 +7,9 @@ import io.netty.handler.codec.http.HttpScheme
 import io.netty.handler.codec.http2.Http2Headers
 import io.netty.incubator.codec.http3.Http3Headers
 
-// TODO: add, get, set, getAll methods
 class AbstractHttpHeader(
-    private val headers: Headers<CharSequence, *, *>,
-    private val toFrame: (Headers<CharSequence, *, *>) -> Any,
+    private val headers: Headers<CharSequence, CharSequence, *>,
+    private val toFrame: (Headers<CharSequence, CharSequence, *>) -> Any,
 ) {
 
     companion object {
@@ -25,6 +24,24 @@ class AbstractHttpHeader(
             is Http3Headers -> this.pseudoHeaderStrategy = Http3PseudoStrat(this.headers)
             else -> throw RuntimeException("Invalid header type '${this.headers.javaClass.name}'")
         }
+    }
+
+    fun set(header: String, value: String): AbstractHttpHeader {
+        this.headers.set(header, value)
+        return this
+    }
+
+    fun add(header: String, value: String): AbstractHttpHeader {
+        this.headers.add(header, value)
+        return this
+    }
+
+    fun get(header: String): String? {
+        return this.headers.get(header)?.toString()
+    }
+
+    fun getAll(header: String): Collection<String>? {
+        return this.headers.getAll(header)?.map { it.toString() }
     }
 
     fun setScheme(scheme: HttpScheme): AbstractHttpHeader {
