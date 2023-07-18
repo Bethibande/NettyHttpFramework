@@ -8,12 +8,11 @@ import com.bethibande.http.impl.http2.Http2Client
 import com.bethibande.http.impl.http2.Http2Server
 import com.bethibande.http.request.HttpRequestContext
 import com.bethibande.http.request.HttpResponseContext
-import com.bethibande.http.requests.RequestBuilder
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
-import io.netty.handler.codec.http.HttpScheme
 import io.netty.handler.codec.http2.Http2SecurityUtil
 import io.netty.handler.ssl.*
+import io.netty.util.ResourceLeakDetector
 import java.net.InetSocketAddress
 import java.text.NumberFormat
 import java.util.concurrent.atomic.AtomicInteger
@@ -35,7 +34,7 @@ fun Long.formatted(): String = NumberFormat.getInstance().format(this)
 fun Double.formatted(): String = NumberFormat.getInstance().format(this)
 
 fun main() {
-    val threads = 12
+    val threads = 20
     val executor1 = ThreadPoolExecutor(executionType = ExecutionType.NIO, threadMaxCount = threads)
     val executor2 = ThreadPoolExecutor(executionType = ExecutionType.NIO, threadMaxCount = threads)
 
@@ -74,15 +73,14 @@ fun main() {
     manager.setMinConnections(threads)
     manager.setMaxStreams(200)
 
-    (1..threads).forEach { _ -> manager.newConnection().sync() }
+    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED)
 
-    //val preparedRequest = client.prepareRequest(HttpMethod.GET, "/test/:name", ::clientHandle)
-    val request = RequestBuilder(HttpMethod.GET, "/test/:name", HttpScheme.HTTPS, ::clientHandle)
+    val request = manager.prepare(HttpMethod.GET, "/test/:name", ::clientHandle)
         .withPathVariable("name" to "Max")
         .build()
 
     val counter = AtomicInteger(0)
-    val times = 10_000_000
+    val times = 20_000_000
     val warmup = 250_000
 
     val warmupCounter = AtomicInteger(warmup)
@@ -90,7 +88,7 @@ fun main() {
     for(i in 1..warmup) {
         request.execute(manager.getNextConnection()).addListener {
                 warmupCounter.getAndDecrement()
-            }
+        }
     }
 
     while (warmupCounter.get() > 0) {
