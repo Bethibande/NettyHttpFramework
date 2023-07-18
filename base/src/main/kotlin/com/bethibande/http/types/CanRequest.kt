@@ -2,6 +2,7 @@ package com.bethibande.http.types
 
 import com.bethibande.http.request.RequestHook
 import io.netty.channel.Channel
+import io.netty.handler.codec.http.HttpMethod
 import io.netty.util.concurrent.DefaultPromise
 import io.netty.util.concurrent.Promise
 

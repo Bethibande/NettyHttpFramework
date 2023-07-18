@@ -65,7 +65,10 @@ fun main() {
 
     val server = Http2Server(executor1, threads, serverSslContext)
     server.bindInterface(address)
-    server.addRoute("/test/:name", HttpMethod.GET, ::serverHandle)
+
+    server.routes {
+        get("/test/:name", ::serverHandle)
+    }
 
     val client = Http2Client(address, clientSslContext, executor2, threads)
 
@@ -80,7 +83,7 @@ fun main() {
         .build()
 
     val counter = AtomicInteger(0)
-    val times = 20_000_000
+    val times = 10_000_000
     val warmup = 250_000
 
     val warmupCounter = AtomicInteger(warmup)

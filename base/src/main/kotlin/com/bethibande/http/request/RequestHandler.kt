@@ -1,18 +1,23 @@
 package com.bethibande.http.request
 
 import com.bethibande.http.routes.Route
+import com.bethibande.http.routes.RouteBuilder
 import com.bethibande.http.routes.RouteRegistry
 
 abstract class RequestHandler {
 
     abstract fun getRoutes(): RouteRegistry
 
+    fun routes(fn: RouteBuilder.() -> Unit) {
+        fn.invoke(RouteBuilder(getRoutes(), ""))
+    }
+
     internal fun handleRequest(context: HttpResponseContext) {
         context.onHeader { header ->
             val path = header.getPath().split(Route.PATH_SEPARATOR).toTypedArray()
             val routes = getRoutes().get(path).iterator()
 
-            while (routes.hasNext()) {
+            while (routes.hasNext() && context.isOpen()) {
                 val route = routes.next()
 
                 if(route.method != null && route.method != header.getMethod()) continue
