@@ -5,6 +5,8 @@ import com.bethibande.http.types.FieldListener
 import com.bethibande.http.types.HasState
 import com.bethibande.http.types.ValueQueue
 import io.netty.buffer.ByteBuf
+import io.netty.buffer.ByteBufAllocator
+import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelProgressivePromise
@@ -46,6 +48,8 @@ abstract class HttpContextBase(
 
     protected var variables: Map<String, String> = mapOf()
 
+    fun alloc(): ByteBufAllocator = this.channel.alloc()
+
     fun connection(): HttpConnection = this.connection
     fun closeFuture(): ChannelFuture = this.channel.closeFuture()
 
@@ -69,7 +73,10 @@ abstract class HttpContextBase(
     fun onData(consumer: Consumer<ByteBuf>) {
         if(this.dataQueue.hasConsumer()) throw IllegalStateException("A data callback has already been set")
         this.dataQueue.consume {
-            consumer.accept(it)
+            if (it.writerIndex() > 0) {
+                consumer.accept(it)
+            }
+
             it.release()
         }
     }
@@ -89,10 +96,6 @@ abstract class HttpContextBase(
         val promise = this.channel.newProgressivePromise()
 
         onData { data ->
-            if(data.writerIndex() == 0) { // empty buffer
-                return@onData
-            }
-
             read += data.writerIndex()
             buffer.writeBytes(data)
 
@@ -156,14 +159,14 @@ abstract class HttpContextBase(
     fun write(buf: ByteBuf): ChannelFuture = this.write(this.frameData(buf))
 
     fun write(bytes: ByteArray): ChannelFuture {
-        val buf = this.channel.alloc().buffer(bytes.size)
-        buf.writeBytes(bytes)
+        val buf = Unpooled.wrappedBuffer(bytes)
+        buf.writerIndex(bytes.size)
         return this.write(buf)
     }
 
     fun write(buffer: ByteBuffer): ChannelFuture {
-        val buf = this.channel.alloc().buffer(buffer.limit())
-        buf.writeBytes(buffer)
+        val buf = Unpooled.wrappedBuffer(buffer)
+        buf.writerIndex(buffer.limit())
         return this.write(buf)
     }
 

@@ -2,6 +2,8 @@ package com.bethibande.http
 
 import com.bethibande.http.connections.ConnectionManager
 import com.bethibande.http.crypto.CertificateHelper
+import com.bethibande.http.data.Reader
+import com.bethibande.http.data.Writer
 import com.bethibande.http.execution.ExecutionType
 import com.bethibande.http.execution.ThreadPoolExecutor
 import com.bethibande.http.impl.http2.Http2Client
@@ -11,7 +13,11 @@ import com.bethibande.http.request.HttpResponseContext
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http2.Http2SecurityUtil
-import io.netty.handler.ssl.*
+import io.netty.handler.ssl.ApplicationProtocolConfig
+import io.netty.handler.ssl.ApplicationProtocolNames
+import io.netty.handler.ssl.SslContextBuilder
+import io.netty.handler.ssl.SslProvider
+import io.netty.handler.ssl.SupportedCipherSuiteFilter
 import io.netty.util.ResourceLeakDetector
 import java.net.InetSocketAddress
 import java.text.NumberFormat
@@ -21,12 +27,18 @@ import kotlin.io.path.Path
 import kotlin.io.path.readText
 
 fun serverHandle(ctx: HttpResponseContext) {
-    ctx.response("Hello ${ctx.variables()["name"]}")
+    val writer = Writer.forString("Hello ${ctx.variables()["name"]}")
+
+    writer.writeHeader(ctx, HttpResponseStatus.OK)
+    writer.write(ctx)
 }
 
 fun clientHandle(ctx: HttpRequestContext) {
-    ctx.onStatus(HttpResponseStatus.OK) { _ ->
-        ctx.responseAsString()
+    ctx.onResponse { h ->
+        Reader.forString().read(ctx, h) {
+            ctx.setResult(it)
+            ctx.close()
+        }
     }
 }
 
@@ -34,7 +46,7 @@ fun Long.formatted(): String = NumberFormat.getInstance().format(this)
 fun Double.formatted(): String = NumberFormat.getInstance().format(this)
 
 fun main() {
-    val threads = 20
+    val threads = 12
     val executor1 = ThreadPoolExecutor(executionType = ExecutionType.NIO, threadMaxCount = threads)
     val executor2 = ThreadPoolExecutor(executionType = ExecutionType.NIO, threadMaxCount = threads)
 
@@ -84,7 +96,7 @@ fun main() {
 
     val counter = AtomicInteger(0)
     val times = 10_000_000
-    val warmup = 250_000
+    val warmup = 500_000
 
     val warmupCounter = AtomicInteger(warmup)
 
