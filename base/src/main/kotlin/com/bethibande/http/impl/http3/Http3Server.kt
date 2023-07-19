@@ -3,9 +3,6 @@ package com.bethibande.http.impl.http3
 import com.bethibande.http.HttpServer
 import com.bethibande.http.config.HttpServerConfig
 import com.bethibande.http.impl.http3.handler.ServerConnectionHandler
-import com.bethibande.http.request.HttpResponseContext
-import com.bethibande.http.request.RequestHandler
-import com.bethibande.http.routes.Route
 import com.bethibande.http.routes.RouteRegistry
 import com.bethibande.http.types.Registration
 import io.netty.bootstrap.Bootstrap
@@ -14,7 +11,6 @@ import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandler
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioDatagramChannel
-import io.netty.handler.codec.http.HttpMethod
 import io.netty.incubator.codec.http3.Http3
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler
 import io.netty.incubator.codec.quic.QuicSslContext
@@ -27,7 +23,7 @@ class Http3Server(
     private val executor: Executor,
     private val maxThreads: Int,
     private val sslContext: QuicSslContext,
-): HttpServer, RequestHandler() {
+): HttpServer() {
 
     companion object {
         const val INITIAL_MAX_DATA: Long = 4096
@@ -94,10 +90,6 @@ class Http3Server(
         this.interfaces.forEach { it.close() }
         this.interfaces.forEach { it.closeFuture().sync() }
         group.shutdownGracefully().sync()
-    }
-
-    override fun addRoute(path: String, method: HttpMethod?, handler: Consumer<HttpResponseContext>) {
-        routes.register(Route(path, method, handler))
     }
 
     override fun configure(consumer: Consumer<HttpServerConfig>) {

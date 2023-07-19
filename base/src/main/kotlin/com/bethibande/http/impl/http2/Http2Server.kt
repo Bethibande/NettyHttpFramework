@@ -3,9 +3,6 @@ package com.bethibande.http.impl.http2
 import com.bethibande.http.HttpServer
 import com.bethibande.http.config.HttpServerConfig
 import com.bethibande.http.impl.http2.handler.ServerHandlerInitializer
-import com.bethibande.http.request.HttpResponseContext
-import com.bethibande.http.request.RequestHandler
-import com.bethibande.http.routes.Route
 import com.bethibande.http.routes.RouteRegistry
 import com.bethibande.http.types.Registration
 import io.netty.bootstrap.ServerBootstrap
@@ -14,7 +11,6 @@ import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelOption
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
-import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.ssl.SslContext
 import java.net.InetSocketAddress
 import java.util.concurrent.Executor
@@ -24,7 +20,7 @@ class Http2Server(
     private val executor: Executor,
     private val maxThreads: Int,
     private val sslContext: SslContext,
-): HttpServer, RequestHandler() {
+): HttpServer() {
 
     private val eventGroup = NioEventLoopGroup(this.maxThreads, this.executor)
     private val interfaces = mutableListOf<Http2Interface>()
@@ -61,10 +57,6 @@ class Http2Server(
 
     override fun stop() {
         this.interfaces.forEach { it.channel.close() }
-    }
-
-    override fun addRoute(path: String, method: HttpMethod?, handler: Consumer<HttpResponseContext>) {
-        this.routes.register(Route(path, method, handler))
     }
 
     override fun getRoutes(): RouteRegistry = this.routes
