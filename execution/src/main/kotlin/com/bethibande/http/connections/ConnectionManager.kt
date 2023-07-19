@@ -5,6 +5,7 @@ import com.bethibande.http.HttpConnection
 import com.bethibande.http.attributes.AttributeList
 import com.bethibande.http.request.RequestHook
 import com.bethibande.http.requests.RequestBuilder
+import com.bethibande.http.requests.execution.RequestDto
 import com.bethibande.http.requests.execution.RequestExecutor
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpScheme
@@ -71,7 +72,9 @@ class ConnectionManager(
         val futureConnection = this.client.newConnection()
         futureConnection.addListener {
             val connection = it.get() as HttpConnection
+
             connection.attr(AttributeList.ATTRIBUTE_EXECUTOR).set(this.newExecutor(connection))
+            connection.attr(AttributeList.ATTRIBUTE_MANAGER).set(this)
         }
 
         return futureConnection
@@ -101,6 +104,14 @@ class ConnectionManager(
 
     fun prepare(method: HttpMethod, path: String, hook: RequestHook): RequestBuilder {
         return RequestBuilder(method, path, this.scheme, hook)
+    }
+
+    private fun executor(connection: HttpConnection): RequestExecutor? {
+        return connection.attr(AttributeList.ATTRIBUTE_EXECUTOR).get()
+    }
+
+    internal fun submitQueue(queue: Collection<RequestDto>) {
+        queue.forEach { this.executor(this.getNextConnection())?.submit(it) }
     }
 
 }
