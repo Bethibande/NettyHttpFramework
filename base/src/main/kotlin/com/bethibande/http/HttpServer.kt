@@ -11,7 +11,7 @@ import io.netty.util.Attribute
 import io.netty.util.AttributeKey
 import io.netty.util.AttributeMap
 import io.netty.util.DefaultAttributeMap
-import java.net.InetSocketAddress
+import java.net.SocketAddress
 import java.util.function.Consumer
 
 abstract class HttpServer: RequestHandler(), AttributeMap {
@@ -22,7 +22,7 @@ abstract class HttpServer: RequestHandler(), AttributeMap {
      * Binds a new network interface
      * @throws IllegalArgumentException if address is already bound
      */
-    abstract fun bindInterface(address: InetSocketAddress): Registration<ChannelFuture>
+    abstract fun bindInterface(address: SocketAddress): Registration<ChannelFuture>
 
     /**
      * Stops the webserver, unbinds all interfaces and shuts down the executor

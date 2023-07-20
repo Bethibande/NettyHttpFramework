@@ -11,13 +11,13 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.ssl.SslContext
 import io.netty.util.concurrent.Promise
-import java.net.InetSocketAddress
+import java.net.SocketAddress
 import java.util.concurrent.Executor
 import java.util.function.Consumer
 
 
 class Http2Client(
-    private val address: InetSocketAddress,
+    private val address: SocketAddress,
     private val sslContext: SslContext,
     private val executor: Executor,
     private val executorThreads: Int,

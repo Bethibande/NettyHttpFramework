@@ -20,13 +20,13 @@ import io.netty.incubator.codec.quic.QuicStreamType
 import io.netty.util.concurrent.DefaultPromise
 import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.Promise
-import java.net.InetSocketAddress
+import java.net.SocketAddress
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
 class Http3Client(
-    private val address: InetSocketAddress,
+    private val address: SocketAddress,
     private val sslContext: QuicSslContext,
     private val executor: Executor,
     private val maxThreads: Int,
@@ -122,7 +122,7 @@ class Http3Client(
         consumer.accept(this.config)
     }
 
-    fun getAddress(): InetSocketAddress = this.address
+    fun getAddress(): SocketAddress = this.address
 
     fun addRoute(path: String, method: HttpMethod, handler: Consumer<HttpResponseContext>) {
         routes.register(Route(path, method, handler))

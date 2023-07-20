@@ -46,7 +46,7 @@ abstract class HttpRequestContext(
         header.setScheme(HttpScheme.HTTPS)
         header.setMethod(method)
         header.setPath(path)
-        header.setAuthority(connection.getRemoteAddress().hostString)
+        header.setAuthority(connection.getRemoteAddress().toString())
 
         return header
     }

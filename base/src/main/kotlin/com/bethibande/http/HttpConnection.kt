@@ -7,7 +7,7 @@ import io.netty.channel.ChannelFuture
 import io.netty.util.Attribute
 import io.netty.util.AttributeKey
 import io.netty.util.AttributeMap
-import java.net.InetSocketAddress
+import java.net.SocketAddress
 
 abstract class HttpConnection(
     protected open val channel: Channel,
@@ -18,7 +18,7 @@ abstract class HttpConnection(
     }
 
     override fun channel(): Channel = this.channel
-    abstract fun getRemoteAddress(): InetSocketAddress
+    abstract fun getRemoteAddress(): SocketAddress
 
     fun isOpen(): Boolean = !super.has(STATE_CLOSED)
     fun isClosed(): Boolean = super.has(STATE_CLOSED)

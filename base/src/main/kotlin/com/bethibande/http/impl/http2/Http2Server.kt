@@ -12,7 +12,7 @@ import io.netty.channel.ChannelOption
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.ssl.SslContext
-import java.net.InetSocketAddress
+import java.net.SocketAddress
 import java.util.concurrent.Executor
 import java.util.function.Consumer
 
@@ -34,7 +34,7 @@ class Http2Server(
         connection.channel().closeFuture().addListener { this.connections.remove(connection) }
     }
 
-    override fun bindInterface(address: InetSocketAddress): Registration<ChannelFuture> {
+    override fun bindInterface(address: SocketAddress): Registration<ChannelFuture> {
         val bootstrap = ServerBootstrap()
         bootstrap.option(ChannelOption.SO_BACKLOG, 1024)
         bootstrap.group(this.eventGroup)

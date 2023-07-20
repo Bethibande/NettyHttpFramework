@@ -13,9 +13,8 @@ import io.netty.incubator.codec.http3.Http3ServerPushStreamManager
 import io.netty.incubator.codec.quic.QuicChannel
 import io.netty.incubator.codec.quic.QuicStreamChannel
 import io.netty.incubator.codec.quic.QuicStreamType
-import io.netty.util.concurrent.DefaultPromise
 import io.netty.util.concurrent.Promise
-import java.net.InetSocketAddress
+import java.net.SocketAddress
 
 class Http3Connection(
     private val requestStreamType: QuicStreamType,
@@ -23,13 +22,13 @@ class Http3Connection(
     private val pushStreamManager: Http3ServerPushStreamManager? = null
 ): HttpConnection(channel), CanRequest {
 
-    private var address: InetSocketAddress? = null
+    private var address: SocketAddress? = null
 
     private val streams = mutableListOf<HttpContextBase>()
 
     override fun channel(): QuicChannel = this.channel
 
-    internal fun updateAddress(address: InetSocketAddress) {
+    internal fun updateAddress(address: SocketAddress) {
         this.address = address
     }
 
@@ -38,7 +37,7 @@ class Http3Connection(
         context.closeFuture().addListener { this.streams.remove(context) }
     }
 
-    override fun getRemoteAddress(): InetSocketAddress {
+    override fun getRemoteAddress(): SocketAddress {
         return this.address ?: throw IllegalStateException("Address not yet set")
     }
 

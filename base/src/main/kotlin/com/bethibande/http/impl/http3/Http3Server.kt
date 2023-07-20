@@ -14,7 +14,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.incubator.codec.http3.Http3
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler
 import io.netty.incubator.codec.quic.QuicSslContext
-import java.net.InetSocketAddress
+import java.net.SocketAddress
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
@@ -67,7 +67,7 @@ class Http3Server(
         this.connections.add(connection)
     }
 
-    override fun bindInterface(address: InetSocketAddress): Registration<ChannelFuture> {
+    override fun bindInterface(address: SocketAddress): Registration<ChannelFuture> {
         val bs = Bootstrap()
         val channel = bs.group(this.group)
             .channel(NioDatagramChannel::class.java)

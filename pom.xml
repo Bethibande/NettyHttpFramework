@@ -25,7 +25,7 @@
         <netty.http3>0.0.18.Final</netty.http3>
         <netty.quic.version>0.0.48.Final</netty.quic.version>
         <netty.http2>4.1.94.Final</netty.http2>
-        <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
+        <native.classifier>${os.detected.name}-${os.detected.arch}</native.classifier>
     </properties>
 
     <dependencies>
