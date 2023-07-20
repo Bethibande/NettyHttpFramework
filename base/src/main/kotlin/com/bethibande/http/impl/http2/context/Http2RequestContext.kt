@@ -18,7 +18,7 @@ class Http2RequestContext(
     promise: Promise<Any>
 ): HttpRequestContext(connection, channel, promise) {
 
-    internal fun channel() = this.channel
+    override fun channel() = this.channel
 
     override fun convertNettyHeaders(headers: Headers<*, *, *>) = AbstractHttpHeader(headers as Http2Headers) {
         DefaultHttp2HeadersFrame(it as Http2Headers).stream(this.channel.stream())

@@ -48,6 +48,8 @@ abstract class HttpContextBase(
 
     protected var variables: Map<String, String> = mapOf()
 
+    open fun channel(): Channel = this.channel
+
     fun alloc(): ByteBufAllocator = this.channel.alloc()
 
     fun connection(): HttpConnection = this.connection

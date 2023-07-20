@@ -2,6 +2,7 @@ package com.bethibande.http.data
 
 import com.bethibande.http.request.HttpContextBase
 import io.netty.buffer.Unpooled
+import io.netty.channel.ChannelProgressivePromise
 import io.netty.handler.codec.http.HttpResponseStatus
 import java.io.InputStream
 import java.nio.charset.Charset
@@ -25,7 +26,12 @@ abstract class Writer(
     fun contentType(): String = this.contentType
     abstract fun contentLength(): Long
 
-    abstract fun write(ctx: HttpContextBase)
+    abstract fun write(ctx: HttpContextBase, promise: ChannelProgressivePromise)
+
+    fun write(ctx: HttpContextBase) {
+        val promise = ctx.channel().newProgressivePromise()
+        this.write(ctx, promise)
+    }
 
     fun writeHeader(ctx: HttpContextBase, status: HttpResponseStatus) {
         val header = ctx.newHeader()
@@ -56,11 +62,12 @@ class StringWriter(
 
     override fun contentLength(): Long = this.data.size.toLong()
 
-    override fun write(ctx: HttpContextBase) {
+    override fun write(ctx: HttpContextBase, promise: ChannelProgressivePromise) {
         val buf = Unpooled.wrappedBuffer(this.data)
         buf.writerIndex(this.data.size)
 
         ctx.write(buf)
+        promise.setSuccess()
     }
 }
 
@@ -73,7 +80,7 @@ class StreamWriter(
 
     override fun contentLength(): Long = this.contentLength
 
-    override fun write(ctx: HttpContextBase) {
+    override fun write(ctx: HttpContextBase, promise: ChannelProgressivePromise) {
         val buffer = ByteArray(this.bufferSize)
         val buf = Unpooled.wrappedBuffer(buffer)
         var total = this.contentLength
@@ -86,6 +93,10 @@ class StreamWriter(
             total -= read
 
             ctx.write(buf)
+
+            promise.setProgress(total, this.contentLength)
         }
+
+        promise.setSuccess()
     }
 }
