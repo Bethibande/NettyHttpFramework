@@ -24,6 +24,7 @@ class ConnectionManager(
     private var scheme = HttpScheme.HTTPS
 
     private val connectionCounter = AtomicInteger(0)
+    private val connectionPool = arrayListOf<HttpConnection>()
 
     private val localConnection = ThreadLocal<HttpConnection>()
 
@@ -75,6 +76,9 @@ class ConnectionManager(
 
             connection.attr(AttributeList.ATTRIBUTE_EXECUTOR).set(this.newExecutor(connection))
             connection.attr(AttributeList.ATTRIBUTE_MANAGER).set(this)
+
+            connection.channel().closeFuture().addListener { this.connectionPool.remove(connection) }
+            this.connectionPool.add(connection)
         }
 
         return futureConnection
@@ -82,13 +86,12 @@ class ConnectionManager(
 
     fun getNextConnection(): HttpConnection {
         val num = this.connectionCounter.getAndIncrement()
-        val connections = this.client.getConnections()
 
-        while (connections.size < this.minConnections) {
+        while (this.connectionPool.size < this.minConnections) {
             this.newConnection().sync()
         }
 
-        return connections[num % this.minConnections]
+        return this.connectionPool[num % this.minConnections]
     }
 
     fun getConnection(): HttpConnection {
