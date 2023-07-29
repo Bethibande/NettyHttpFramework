@@ -19,7 +19,7 @@ import java.util.function.Consumer
 class Http2Server(
     private val executor: Executor,
     private val maxThreads: Int,
-    private val sslContext: SslContext,
+    private val sslContext: SslContext?,
 ): HttpServer() {
 
     private val eventGroup = NioEventLoopGroup(this.maxThreads, this.executor)

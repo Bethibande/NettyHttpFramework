@@ -16,8 +16,8 @@ class ServerStreamInitializer: ChannelInitializer<Http2StreamChannel>() {
     private val dataHandler = ServerDataHandler()
 
     override fun initChannel(ch: Http2StreamChannel) {
-        val server = ch.parent().attr(APNHandler.ATTRIB_SERVER).get()
-        val connection = ch.parent().attr(APNHandler.ATTRIB_CONNECTION).get()
+        val server = ch.parent().attr(ServerHandlerInitializer.ATTRIB_SERVER).get()
+        val connection = ch.parent().attr(ServerHandlerInitializer.ATTRIB_CONNECTION).get()
 
         val context = Http2ResponseContext(
             connection,

@@ -7,11 +7,11 @@ import io.netty.handler.codec.http2.Http2Settings
 import io.netty.handler.ssl.SslContext
 
 class ClientHandlerInitializer(
-    private val sslContext: SslContext,
+    private val sslContext: SslContext?,
 ): ChannelInitializer<Channel>() {
 
     override fun initChannel(ch: Channel) {
-        ch.pipeline().addFirst(this.sslContext.newHandler(ch.alloc()))
+        this.sslContext?.let { ch.pipeline().addFirst(it.newHandler(ch.alloc())) }
 
         val frameCodec = Http2FrameCodecBuilder.forClient()
             .initialSettings(Http2Settings.defaultSettings())

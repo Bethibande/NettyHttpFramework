@@ -4,8 +4,6 @@ import com.bethibande.http.connections.ConnectionManager
 import com.bethibande.http.crypto.CertificateHelper
 import com.bethibande.http.data.Reader
 import com.bethibande.http.data.Writer
-import com.bethibande.http.execution.ExecutionType
-import com.bethibande.http.execution.ThreadPoolExecutor
 import com.bethibande.http.impl.http2.Http2Client
 import com.bethibande.http.impl.http2.Http2Server
 import com.bethibande.http.request.HttpRequestContext
@@ -21,6 +19,7 @@ import io.netty.handler.ssl.SupportedCipherSuiteFilter
 import io.netty.util.ResourceLeakDetector
 import java.net.InetSocketAddress
 import java.text.NumberFormat
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.LockSupport
 import kotlin.io.path.Path
@@ -47,8 +46,9 @@ fun Double.formatted(): String = NumberFormat.getInstance().format(this)
 
 fun main() {
     val threads = 12
-    val executor1 = ThreadPoolExecutor(executionType = ExecutionType.NIO, threadMaxCount = threads)
-    val executor2 = ThreadPoolExecutor(executionType = ExecutionType.NIO, threadMaxCount = threads)
+
+    val executor1 = Executors.newFixedThreadPool(threads)
+    val executor2 = Executors.newFixedThreadPool(threads)
 
     val key = CertificateHelper.getPrivateKeyFromString(Path("./cert/key_pkcs8.pem").readText())
     val cert = CertificateHelper.getCertificateFromString(Path("./cert/cert.pem"))
@@ -95,7 +95,7 @@ fun main() {
         .build()
 
     val counter = AtomicInteger(0)
-    val times = 10_000_000
+    val times = 5_000_000
     val warmup = 500_000
 
     val warmupCounter = AtomicInteger(warmup)
@@ -107,7 +107,7 @@ fun main() {
     }
 
     while (warmupCounter.get() > 0) {
-        LockSupport.parkNanos(1000000)
+        LockSupport.parkNanos(1_000_000)
     }
 
     val start = System.nanoTime()

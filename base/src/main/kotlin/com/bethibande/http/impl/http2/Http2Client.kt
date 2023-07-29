@@ -18,7 +18,7 @@ import java.util.function.Consumer
 
 class Http2Client(
     private val address: SocketAddress,
-    private val sslContext: SslContext,
+    private val sslContext: SslContext?,
     private val executor: Executor,
     private val executorThreads: Int,
 ) : HttpClient() {

@@ -133,12 +133,12 @@ abstract class HttpContextBase(
         return this.writeAndFlush(header.toFrame())
     }
 
-    protected fun <R> access(fn: Function<Channel, R>): R {
+    private fun <R> access(fn: Function<Channel, R>): R {
         if(has(STATE_CLOSED)) throw IllegalStateException("The context has already been closed")
         return fn.apply(this.channel)
     }
 
-    protected fun writeAndFlush(obj: Any): ChannelFuture = this.access { channel ->
+    private fun writeAndFlush(obj: Any): ChannelFuture = this.access { channel ->
         if(this.has(STATE_READ_ONLY)) throw IllegalStateException("The context is read-only.")
 
         val future = channel.writeAndFlush(obj)
