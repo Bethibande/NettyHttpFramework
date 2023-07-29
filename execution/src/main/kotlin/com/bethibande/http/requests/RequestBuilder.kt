@@ -4,6 +4,8 @@ import com.bethibande.http.request.RequestHook
 import com.bethibande.http.routes.Route
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpScheme
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 class RequestBuilder(
     private val method: HttpMethod,
@@ -35,7 +37,7 @@ class RequestBuilder(
 
         this.variables.forEach { (key, value) ->
             this.pathVariables[key]?.let { index ->
-                pathArray[index] = value
+                pathArray[index] = URLEncoder.encode(value, StandardCharsets.UTF_8)
             }
         }
 

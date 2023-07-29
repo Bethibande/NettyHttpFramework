@@ -2,6 +2,8 @@ package com.bethibande.http.routes
 
 import com.bethibande.http.request.HttpResponseContext
 import io.netty.handler.codec.http.HttpMethod
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import java.util.function.Consumer
 
 class Route(
@@ -41,7 +43,7 @@ class Route(
     }
 
     fun parseVariables(path: Array<String>): Map<String, String> {
-        return vars.mapValues { entry -> path[entry.value] }
+        return vars.mapValues { entry -> URLDecoder.decode(path[entry.value], StandardCharsets.UTF_8) }
     }
 
 }
