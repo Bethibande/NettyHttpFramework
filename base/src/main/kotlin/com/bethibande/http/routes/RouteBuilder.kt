@@ -15,41 +15,44 @@ class RouteBuilder(
         private val PATH_REPLACE_REGEX = Regex("//+")
     }
 
-    private fun contactPath(path: String): String = (this.path + path).replace(PATH_REPLACE_REGEX, "/")
+    private fun contactPath(path: String?): String {
+        if (path == null) return this.path
+        return (this.path + path).replace(PATH_REPLACE_REGEX, "/")
+    }
 
-    fun get(path: String, handler: ResponseHook) {
+    fun get(path: String? = null, handler: ResponseHook) {
         this.registry.register(Route(this.contactPath(path), HttpMethod.GET, handler))
     }
 
-    fun post(path: String, handler: ResponseHook) {
+    fun post(path: String? = null, handler: ResponseHook) {
         this.registry.register(Route(this.contactPath(path), HttpMethod.POST, handler))
     }
 
-    fun delete(path: String, handler: ResponseHook) {
+    fun delete(path: String? = null, handler: ResponseHook) {
         this.registry.register(Route(this.contactPath(path), HttpMethod.DELETE, handler))
     }
 
-    fun patch(path: String, handler: ResponseHook) {
+    fun patch(path: String? = null, handler: ResponseHook) {
         this.registry.register(Route(this.contactPath(path), HttpMethod.PATCH, handler))
     }
 
-    fun put(path: String, handler: ResponseHook) {
+    fun put(path: String? = null, handler: ResponseHook) {
         this.registry.register(Route(this.contactPath(path), HttpMethod.PUT, handler))
     }
 
-    fun head(path: String, handler: ResponseHook) {
+    fun head(path: String? = null, handler: ResponseHook) {
         this.registry.register(Route(this.contactPath(path), HttpMethod.HEAD, handler))
     }
 
-    fun options(path: String, handler: ResponseHook) {
+    fun options(path: String? = null, handler: ResponseHook) {
         this.registry.register(Route(this.contactPath(path), HttpMethod.OPTIONS, handler))
     }
 
-    fun connect(path: String, handler: ResponseHook) {
+    fun connect(path: String? = null, handler: ResponseHook) {
         this.registry.register(Route(this.contactPath(path), HttpMethod.CONNECT, handler))
     }
 
-    fun trace(path: String, handler: ResponseHook) {
+    fun trace(path: String? = null, handler: ResponseHook) {
         this.registry.register(Route(this.contactPath(path), HttpMethod.TRACE, handler))
     }
 
