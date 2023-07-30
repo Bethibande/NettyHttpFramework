@@ -30,6 +30,7 @@ fun serverHandle(ctx: HttpResponseContext) {
 
     writer.writeHeader(ctx, HttpResponseStatus.OK)
     writer.write(ctx)
+    ctx.close()
 }
 
 fun clientHandle(ctx: HttpRequestContext) {

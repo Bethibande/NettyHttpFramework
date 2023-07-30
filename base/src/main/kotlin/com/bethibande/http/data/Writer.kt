@@ -28,6 +28,16 @@ abstract class Writer(
 
     abstract fun write(ctx: HttpContextBase, promise: ChannelProgressivePromise)
 
+    fun writeHeaderAndData(ctx: HttpContextBase, status: HttpResponseStatus) {
+        this.writeHeader(ctx, status)
+        this.write(ctx)
+    }
+
+    fun writeHeaderAndData(ctx: HttpContextBase, path: String) {
+        this.writeHeader(ctx, path)
+        this.write(ctx)
+    }
+
     fun write(ctx: HttpContextBase) {
         val promise = ctx.channel().newProgressivePromise()
         this.write(ctx, promise)

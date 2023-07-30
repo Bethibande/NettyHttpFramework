@@ -73,7 +73,7 @@ class StringReader(
                 consumer.accept(this.readString(buffer, length, charset))
                 buffer.release()
 
-                promise.setSuccess()
+                promise.trySuccess()
             }
         }
     }
@@ -100,7 +100,7 @@ class StreamReader(
 
             if (readBytes == contentLength) {
                 consumer.accept(Unit)
-                promise.setSuccess()
+                promise.trySuccess()
             }
         }
     }
