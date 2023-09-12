@@ -3,7 +3,7 @@ type: docker
 name: default
 
 steps:
-- name: test
+- name: compile
   image: maven:3.9.4-amazoncorretto-17
   commands:
   - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
